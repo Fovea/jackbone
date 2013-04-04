@@ -60,42 +60,261 @@
     _.extend(Model.prototype, Backbone.Model.prototype, {
     });
 
+    // Jackbone.View
+    // -------------
+    var View = Jackbone.View = function (options) {
+        Backbone.View.apply(this, arguments);
+    };
+
+    _.extend(View.prototype, Backbone.View.prototype, {
+        defaultEvent: function (e) {
+            e.preventDefault();
+            var $target = $(e.target);
+            var route = $target.attr('route');
+            Jackbone.router.goto(route);
+            return false;
+        },
+        setOptions: function (options) {
+            this.options = options;
+            if (options.back) {
+                this.back = options.back;
+            }
+        }
+    });
+
+    // Jackbone.Header
+    // ---------------
+    var Header = Jackbone.Header = function (options) {
+        Jackbone.View.apply(this, arguments);
+        this.back = options.back;
+    };
+    _.extend(Header.prototype, Jackbone.View.prototype);
+
+    // Jackbone.Footer
+    // ---------------
+    var Footer = Jackbone.Footer = function (options) {
+        Jackbone.View.apply(this, arguments);
+        this.back = options.back;
+    };
+    _.extend(Footer.prototype, Jackbone.View.prototype);
+
+    // JQueryMobile View
+    // -----------------
+    var JQMView = function (header, content, footer) {
+        Backbone.View.apply(this, []);
+        this.header  = header;
+        this.footer  = footer;
+        this.content = content;
+        this.needRedraw = true;
+        this.needSetup  = true;
+
+        // setup relations between header, footer and content.
+        if (header) {
+            header.content = content;
+            header.footer  = footer;
+            header.root    = this;
+        }
+        if (footer) {
+            footer.content = content;
+            footer.header  = header;
+            footer.root    = this;
+        }
+        if (content) {
+            content.header  = header;
+            content.footer  = footer;
+            content.root    = this;
+        }
+    };
+
+    _.extend(JQMView.prototype, Backbone.View.prototype, {
+        // Change options for header, footer and content.
+        setOptions: function (options) {
+            if (this.header)  this.header.setOptions(options);
+            if (this.footer)  this.footer.setOptions(options);
+            if (this.content) this.content.setOptions(options);
+        },
+
+        /** Default render. Sets header, content and footer. */
+        render: function() {
+            if (this.needRedraw) { // Controllers are responsible of setting needRedraw.
+                // TODO: replace by an 'inlined' html for portability
+                this.$el.html(Templates['page.html']());
+
+                if (this.header) {
+                    this.header.setElement(this.$('div[data-role=header]'));
+                    // this.header.setTitle(this.content.title || '');
+                    // this.header.setSubtitle(this.content.subtitle || '');
+                    // this.header.setBack(this.content.back || {});
+                    this.header.render();
+                }
+
+                if (this.footer) {
+                    this.footer.setElement(this.$('div[data-role=footer]'));
+                    this.footer.render();
+                }
+                else {
+                    this.$('div[data-role=footer]').remove();
+                    this.$('div[data-role=content]').css('bottom', '0');
+                }
+
+                this.content.setElement(this.$('div[data-role=content]'));
+                this.content.render();
+
+                this.needRedraw = false;
+            }
+        },
+
+        events: {
+            // JQueryMobile Hack
+            'pagebeforehide':   '_onPageBeforeHide', // before hide transition
+            'pagehide': '_onPageHide',               // after  hide transition
+
+            'pagebeforeshow':   '_onPageBeforeShow', // before show transition
+            'pageshow': '_onPageShow',               // after  show transition
+            
+            'pagebeforecreate': '_onPageBeforeCreate', // before create
+            'pagecreate':       '_onPageCreate',       // before jqm enhancement
+
+            //'swiperight': 'triggerGoBack',
+            //'swipeleft':  'triggerGoNext',
+            // 'click':  'ignoreEvent' // Force vclick to be used, all click to be ignored.
+        },
+        // JQuery Mobile Hack
+        _onPageBeforeHide: function() {
+            if (this.content.onPageBeforeHide) this.content.onPageBeforeHide();
+            this.clean();
+        },
+        _onPageHide: function() {
+            this.undelegateEvents();
+            if (this.content.onPageHide) this.content.onPageHide();
+        },
+        _onPageBeforeShow: function() {
+            if (this.content.onPageBeforeShow) this.content.onPageBeforeShow();
+            if (this.footer) this.footer.refresh();
+            if (this.header) this.header.refresh();
+            this.enable(); // Make sure the page isn't disabled.
+        },
+        _onPageShow: function() {
+            this.setup();
+            if (this.content.onPageShow) this.content.onPageShow();
+        },
+        _onPageBeforeCreate: function() {
+            if (this.content.onPageBeforeCreate) this.content.onPageBeforeCreate();
+        },
+        _onPageCreate: function() {
+            if (this.content.onPageCreate) this.content.onPageCreate();
+        },
+        ignoreEvent: function(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            return false;
+        },
+        setup: function() {
+            if (this.needSetup) {
+                if (this.footer) {
+                    this.footer.setup();
+                }
+                if (this.header) {
+                    this.header.setup();
+                }
+                if (this.content.setup) this.content.setup();
+                this.needSetup = false;
+            }
+        },
+        clean: function() {
+            if (!this.needSetup) {
+                if (this.footer) this.footer.clean();
+                if (this.header) this.header.clean();
+                if (this.content.clean) this.content.clean();
+                this.needSetup = true;
+            }
+        },
+
+        refresh: function() {
+            if (this.content.refresh) this.content.refresh();
+            if (this.footer)          this.footer.refresh();
+            if (this.header)          this.header.refresh();
+        },
+
+        disable: function() {
+            this.$el.addClass('ui-disabled');
+        },
+        enable: function() {
+            this.$el.removeClass('ui-disabled');
+        },
+    });
+
+    // Theming Options
+    // ---------------
+
+    // Screens may include a default header.
+    // It can be disabled globally by setting this to null
+    // or per screen by passing the noHeader option to the
+    // ViewManager.
+    Jackbone.DefaultHeaderView = null;
+    // Screens may include a default footer too.
+    // It can be disabled globally by setting this to null
+    // or per screen by passing the noFooter option to the
+    // ViewManager.
+    Jackbone.DefaultFooterView = null;
+
+    // Jackbone.Controller
+    // -------------------
+
+    // For complex views that could be reused in different contexts
+    // it's better to create one (or many) controller.
+    // Views will only handle input/output, whereas controllers
+    // will handle logic and interactions with models.
+
+
     // Jackbone.ViewManager
     // --------------------
 
     // Handles life and death of Views and Controllers
-    var Vm = {
+    var ViewManager = {
         views: {},
         controllers: {},
         currentController: null,
 
+        // Create a View if it's not already in cache.
+        // Configure it with the given options.
+        //
+        // New instance of the View will be created if options are
+        // different from those already in cache.
+        //
+        // Use extra_options to set some options that won't induce
+        // creation of a new instance (useful for View that eat
+        // a lot memory or cpu power for instance).
+        //
+        // A few special options:
+        // - options.backhash: force the page to go back to.
+        // - options.noHeader: disable the header for this view.
+        // - options.noFooter: disable the footer for this view.
         createWithView: function (name, View, options, extra_options) {
+            var view;
             var pageUID = name + JSON.stringify(options);
-            if (extra_options)
+            // Add extra_options to options
+            if (extra_options) {
                 options = _.extend(options, extra_options);
-            // An existing view existed. Make sure it is clean.
-            if(typeof views[pageUID] !== 'undefined') {
-                var v = views[pageUID];
-                if (options && options.backhash) {
-                    v.content.back.hash = options.backhash;
-                    if (v.header) v.header.back.hash = options.backhash;
-                }
-                if (options && v.content.changeOptions)
-                    v.content.changeOptions(options);
-                currentController = null;
-                return v;
             }
-            else {
+            // Adjust the backhash option
+            if (options && options.backhash) {
+                options.back = {
+                    title: options.backtitle || 'Back',
+                    hash:  options.backhash
+                };
+            }
+            // An existing view existed. Make sure it is clean.
+            if (typeof this.views[pageUID] !== 'undefined') {
+                view = this.views[pageUID];
+                view.setOptions(options);
+            } else {
+                var noHeader = (options && options.noHeader) || (!Jackbone.DefaultHeader);
+                var noFooter = (options && options.noFooter) || (!Jackbone.DefaultFooter);
                 var content = new View(options);
-                var header  = (options && options.noHeader) ? null : new Header();
-                var footer  = ((options && options.noFooter) || Version.release) ? null : new Footer();
-                var view    = new JQMView(header, content, footer);
-                views[pageUID] = view;
-                Logger.setVmStats(cacheStats());
-                if (options && options.backhash) {
-                    content.back.hash = options.backhash;
-                    if (header) header.back.hash = options.backhash;
-                }
+                var header  = noHeader ? null : new DefaultHeader(options);
+                var footer  = noFooter ? null : new DefaultFooter(options);
+                view = new JQMView(header, content, footer);
+                this.views[pageUID] = view;
                 if (header == null) {
                     $(view.el).find("div[data-role=header]").css('display','none');
                     $(view.el).find("div[data-role=content]").css('top',0);
@@ -104,9 +323,9 @@
                     $(view.el).find("div[data-role=footer]").css('display','none');
                     $(view.el).find("div[data-role=content]").css('bottom',0);
                 }
-                currentController = null;
-                return view;
             }
+            this.currentController = null;
+            return view;
         }
     };
 
@@ -155,7 +374,7 @@
 
         // Create and open view if not already cached.
         addView: function (viewName, View, options, extra) {
-            var v = Vm.create(viewName, View, options, extra);
+            var v = ViewManager.create(viewName, View, options, extra);
             this.changePage(viewName, v);
         },
 
@@ -228,33 +447,5 @@
     // Jackbone.History
     // ----------------
     var history = Jackbone.history = Backbone.history;
-
-    // Jackbone.View
-    // -------------
-    var View = Jackbone.View = function (options) {
-        Backbone.View.apply(this, arguments);
-    };
-
-    _.extend(View.prototype, Backbone.View.prototype, {
-        defaultEvent: function (e) {
-            e.preventDefault();
-            var $target = $(e.target);
-            var route = $target.attr('route');
-            Jackbone.router.goto(route);
-            return false;
-        }
-    });
-
-    var JQMView = ...;
-    ...renderContent();
-    ...content();
-
-    // Jackbone.Controller
-    // -------------------
-
-    // For complex views that could be reused in different contexts
-    // it's better to create one (or many) controller.
-    // Views will only handle input/output, whereas controllers
-    // will handle logic and interactions with models.
 
 }).call(this);
