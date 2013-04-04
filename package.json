@@ -1,0 +1,20 @@
+{
+    "name"          : "jackbone",
+    "description"   : "Give a Backbone to your JQuery Mobile app.",
+    "url"           : "http://jackbonejs.org",
+    "keywords"      : ["model", "view", "controller", "router", "server", "client", "browser", "mobile", "jquery"],
+    "author"        : "Jean-Christophe Hoelt <hoelt@fovea.cc>",
+    "dependencies"  : {
+        "jquery"     : "latest",
+        "underscore" : ">=1.4.3",
+        "backbone"   : ">=1.0.0"
+    },
+    "devDependencies": {
+        "docco": "0.6.1",
+        "jslint": "latest",
+        "coffee-script": "1.6.1"
+    },
+    "main"          : "jackbone.js",
+    "version"       : "0.1.0",
+    "license"       : "MIT"
+}
