@@ -59,7 +59,7 @@
 
     _.extend(Model.prototype, Backbone.Model.prototype, {
     });
-
+    
     // Jackbone.View
     // -------------
     var View = Jackbone.View = function (options) {
@@ -79,7 +79,16 @@
             if (options.back) {
                 this.back = options.back;
             }
-        }
+        },
+        setup: function () {},
+        clean: function () {},
+        refresh: function () {},
+        onPageBeforeCreate: function () {},
+        onPageCreate: function () {},
+        onPageBeforeShow: function () {},
+        onPageShow: function () {},
+        onPageBeforeHide: function () {},
+        onPageHide: function () {}
     });
 
     // Jackbone.Header
@@ -222,17 +231,17 @@
         },
         clean: function() {
             if (!this.needSetup) {
-                if (this.footer) this.footer.clean();
-                if (this.header) this.header.clean();
-                if (this.content.clean) this.content.clean();
+                if (this.footer)  this.footer.clean();
+                if (this.header)  this.header.clean();
+                if (this.content) this.content.clean();
                 this.needSetup = true;
             }
         },
 
         refresh: function() {
-            if (this.content.refresh) this.content.refresh();
-            if (this.footer)          this.footer.refresh();
-            if (this.header)          this.header.refresh();
+            if (this.content) this.content.refresh();
+            if (this.footer)  this.footer.refresh();
+            if (this.header)  this.header.refresh();
         },
 
         disable: function() {
