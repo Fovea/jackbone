@@ -3,7 +3,7 @@
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Jackbone may be freely distributed under the MIT license.
 //     For all details and documentation:
-//     http://jackbonejs.org
+//     http://jackbone.org
 (function () {
     'use strict';
 
@@ -91,14 +91,14 @@
         },
 
         // Bind and delegate events for this view and its subviews.
-        setup: function () {
-            this.callSubviews('setup');
+        _setup: function () {
+            this.callSubviews('_setup');
             this.bindEvents();
             this.delegateEvents();
         },
         // Unbind and undelegate events for this view and its subviews.
-        clean: function () {
-            this.callSubviews('clean');
+        _clean: function () {
+            this.callSubviews('_clean');
             this.unbindEvents();
             this.undelegateEvents();
         },
@@ -329,13 +329,13 @@
         },
         setup: function () {
             if (this.needSetup) {
-                this.callSubviews('setup');
+                this.callSubviews('_setup');
                 this.needSetup = false;
             }
         },
         clean: function () {
             if (!this.needSetup) {
-                this.callSubviews('clean');
+                this.callSubviews('_clean');
                 this.needSetup = true;
             }
         },
@@ -374,6 +374,95 @@
     // it's better to create one (or many) controller.
     // Views will only handle input/output, whereas controllers
     // will handle logic and interactions with models.
+    //
+    // Backbone doesn't provide a "Controller" interface, but Jackbone
+    // defines one. It's more than an interface, it's a also set of
+    // conventions that controllers have to follow.
+    //
+    // Here is what Controllers do:
+    // - Load models and collections.
+    // - Create the view, send it the appropriate 'options'.
+    // - Provide "intelligence" to the view as a set of callbacks.
+    //
+    // *INTERACTION WITH THE VIEW*
+    // Controller should fill this.options in the initialize method.
+    // 
+    // In options, we add models and callbacks that the view will
+    // have to call. A very common callback is onRefresh().
+    // onRefresh will be called by the view to refresh the models
+    // and collections, before it refreshes the interface.
+    //
+    // *OTHER THINGS TO KNOW*
+    //
+    // A Controller will be kept in cache by the ViewManager, for
+    // a few minutes after its View was hidden.
+    //
+    // Later on, controller's destroy() will be called by the
+    // garbage collector. This is where the Controller has to destroy
+    // structure it may have created.
+    //
+    // A nice way for a controller to monitor his view is by providing
+    // callbacks in the options.
+    //
+    // *INTERACTION WITH THE VIEW MANAGER*
+    // 
+    // The View Manager will instanciate controllers.
+    // 
+    // It will then look for this.view, an instanciated Jackbone.View
+    //
+
+    var Controller = Jackbone.Controller = function (options) {
+        this._configure(options || {});
+        this.initialize.call(this, options);
+        this.view = this.createView(this.options);
+    };
+
+    // List of controller options to be merged as properties.
+    var controllerOptions = ['model', 'collection'];
+
+    _.extend(Jackbone.Controller.prototype, {
+        // Refresh Models and Collections, call "callback" when done.
+        refresh: function (callback) {
+            callback();
+        },
+
+        // Initialize the controller
+        initialize: function (options) {
+            // Prepare options to be sent to the view.
+            this.options.onRefresh = _.bind(this.refresh, this);
+        },
+
+        // Factory method, returns a newly created view.
+        // Override to create your own View.
+        createView: function (options) {
+            // this.view = new View(this.options);
+            return null;
+        },
+
+        // Destroy the controller, its views and models.
+        destroy: function () {},
+
+        // Called whenever events binding is required.
+        // Overload to bind your own callbacks to events.
+        bindEvents: function () {},
+
+        // Called whenever cleaning of events binding is required.
+        // Overload to unbind your own callbacks to events.
+        unbindEvents: function () {},
+
+        // Performs the initial configuration of a View with a set of options.
+        // Keys with special meaning *(e.g. model, collection, id, className)* are
+        // attached directly to the view.  See `viewOptions` for an exhaustive
+        // list.
+        _configure: function (options) {
+            if (this.options) {
+                options = _.extend({}, _.result(this, 'options'), options);
+            }
+            _.extend(this, _.pick(options, controllerOptions));
+            this.options = options;
+        }
+
+    });
 
 
     // Jackbone.ViewManager
@@ -384,6 +473,39 @@
         views: {},
         controllers: {},
         currentController: null,
+
+        setCurrentController: function (ctrl) {
+            if (ctrl !== this.currentController) {
+                if (this.currentController) {
+                    this.currentController.unbindEvents();
+                }
+                this.currentController = ctrl;
+                if (this.currentController) {
+                    this.currentController.bindEvents();
+                }
+            }
+        },
+
+        // Garbage collector, removes unused views and controllers.
+        _clearControllers: function () {
+            var now = +new Date();
+            var toRemove = _(this.controllers).filter(function (c) {
+                var age = (now - c.lastView);
+                return (age > 60000); // Keep in cache for 1 minute.
+            });
+
+            _(toRemove).each(function (c) {
+                if (c.controller !== this.currentController) {
+                    delete this.controllers[c.pageUID];
+                    c.controller.destroy();
+                    if (c.controller._rootView) {
+                        c.controller._rootView.clean();
+                        c.controller._rootView.remove();
+                        delete c.controller._rootView;
+                    }
+                }
+            });
+        },
 
         // Create a View if it's not already in cache.
         // Configure it with the given options.
@@ -420,7 +542,6 @@
                 view = this.views[pageUID];
                 // Change its options and refresh.
                 view.setOptions(options);
-                view.refresh();
             } else {
                 // Should we create a Header and/or Footer?
                 var noHeader = (options && options.noHeader) || (!Jackbone.DefaultHeader);
@@ -436,8 +557,57 @@
                 this.views[pageUID] = view;
             }
             // No controller is active, this is a Controller-less View.
-            this.currentController = null;
+            this.setCurrentController(null);
             return view;
+        },
+
+        // Loop counter used to run garbage collection
+        // every n calls to createWithController.
+        runGC: 0,
+
+        // Create a Controller if it's not already in cache.
+        // Configure it with the given options.
+        //
+        // New instance of the Controller will be created if options
+        // are different from those already in cache.
+        //
+        // A few special options:
+        // - options.backhash: force the page to go back to.
+        // - options.noHeader: disable the header for this view.
+        // - options.noFooter: disable the footer for this view.
+        createWithController: function (name, Controller, options) {
+            // Run Controller Garbage Collector
+            this.runGC += 1;
+            if (this.runGC > 5) {
+                this.runGC = 0;
+                this._clearControllers();
+            }
+            // Create Controller if not exists.
+            var ctrl = null;
+            var pageUID = name + JSON.stringify(options);
+            if (typeof this.controllers[pageUID] !== 'undefined') {
+                ctrl = this.controllers[pageUID].controller;
+            } else {
+                // Should we create a Header and/or Footer?
+                var noHeader = (options && options.noHeader) || (!Jackbone.DefaultHeader);
+                var noFooter = (options && options.noFooter) || (!Jackbone.DefaultFooter);
+                // Initialize the controller
+                ctrl = new Controller(options);
+                // Logger.log('Create Controller: ' + pageUID);
+                var content = ctrl.view;
+                var header  = noHeader ? null : new Jackbone.DefaultHeader(options);
+                var footer  = noFooter ? null : new Jackbone.DefaultFooter(options);
+                var view    = new JQMView(header, content, footer);
+                // Cache the controller
+                this.controllers[pageUID] = { pageUID: pageUID, controller: ctrl };
+                ctrl._rootView = view;
+            }
+            // Return root view (a JQMView)
+            this.setCurrentController(ctrl);
+            this.controllers[pageUID].lastView = +new Date();
+
+            // Events.trigger('change:pagecid', ctrl.componentCID, ctrl.reportCID);
+            return ctrl._rootView;
         }
     };
 
@@ -507,7 +677,9 @@
 
         // Create and open view if not already cached.
         openView: function (viewName, View, options, extra, role) {
-            extra || (extra = {});
+            if (!extra) {
+                extra = {};
+            }
             // By default 'Back" will return to previous page.
             if (!extra.backhash) {
                 extra.backhash = this.currentHash;
@@ -532,6 +704,7 @@
             // onPageBeforeShow and onPageShow.
             if (isExistingPage.length === 1) {
                 page.delegateEvents();
+                page.refresh();
             } else {
                 // Create the page, store its page name in an attribute
                 // so it can be retrieved later.
@@ -613,7 +786,7 @@
         $.mobile.linkBindingEnabled = false;
         $.mobile.hashListeningEnabled = false;
         $.mobile.pushStateEnabled = false;
-         
+
         // $.mobile.buttonMarkup.hoverDelay = 0
         // Enable for smooth transitions on iOS
         $.mobile.touchOverflowEnabled = true;
