@@ -114,6 +114,7 @@
         // Called whenever cleaning of events binding is required.
         // Overload to unbind your own callbacks to events.
         unbindEvents: function () {
+            this.stopListening();
         },
 
         // Called whenever a refresh of you view is required.
@@ -352,6 +353,61 @@
         },
     });
 
+    // Listview Helper
+    // ---------------
+    //
+    // Helps doing a clean refresh of a listview.
+    //
+    // updater is a ListviewUpdater object {
+    //     setLi: function ($li, model);
+    //     newLi: function (model);
+    // }
+    // setLi will adjust the content of jQuery li element
+    //     according to the given JSON model.
+    // newLi will create a new li element from given JSON model.
+    var Listview = Jackbone.Listview = {
+        // Parameters
+        // ul: a jQuery ul element
+        // collection: JSON collection
+        // updater, a ListviewUpdater (see above)
+        updateJSON: function (ul, collection, updater) {
+            var i = 0;
+            var li = ul.find('li');
+
+            // Update existing
+            while (i < collection.length && i < li.length) {
+                updater.setLi($(li[i]), collection[i]);
+                ++i;
+            }
+            // Add new
+            while (i < collection.length) {
+                ul.append(updater.newLi(collection[i]));
+                ++i;
+            }
+            // Remove extra
+            while (i < li.length) {
+                $(li[i]).remove();
+                ++i;
+            }
+            ul.listview('refresh');
+        },
+
+        // Parameters
+        // ul: a jQuery ul element
+        // collection: Backbone collection
+        // updater, a ListviewUpdater (see above)
+        update: function (ul, collection, updater) {
+            var i = 0;
+            var li = ul.find('li');
+            var json = _(collection.models).map(function (m) {
+                var ret = _.clone(m.attributes);
+                _.extend(ret, { id:m.id, cid:m.cid });
+                return ret;
+            });
+            this.updateJSON(ul, json, updater);
+        }
+    };
+
     // Theming Options
     // ---------------
 
@@ -420,7 +476,7 @@
     // List of controller options to be merged as properties.
     var controllerOptions = ['model', 'collection'];
 
-    _.extend(Jackbone.Controller.prototype, {
+    _.extend(Jackbone.Controller.prototype, Backbone.Events, {
         // Refresh Models and Collections, call "callback" when done.
         refresh: function (callback) {
             callback();
@@ -448,7 +504,9 @@
 
         // Called whenever cleaning of events binding is required.
         // Overload to unbind your own callbacks to events.
-        unbindEvents: function () {},
+        unbindEvents: function () {
+            this.stopListening();
+        },
 
         // Performs the initial configuration of a View with a set of options.
         // Keys with special meaning *(e.g. model, collection, id, className)* are
