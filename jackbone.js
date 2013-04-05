@@ -396,6 +396,8 @@
         // First created router is the default router.
         if (!Jackbone.router) {
             Jackbone.router = this;
+            // It's also a good time to configure JQuery Mobile.
+            Jackbone.configureJQM();
         }
     };
     Router.extend = Backbone.Router.extend;
@@ -434,19 +436,18 @@
         },
 
         // Create and open view if not already cached.
-        openView: function (viewName, View, options, extra) {
-            var v = ViewManager.createWithView(viewName, View, options, extra);
-            this.changePage(viewName, v);
-        },
-
-        // Create and open view if not already cached.
-        openDialog: function (viewName, View, options, extra) {
+        openView: function (viewName, View, options, extra, role) {
             extra || (extra = {});
             if (!extra.backhash) {
                 extra.backhash = this.currentHash;
             }
             var v = ViewManager.createWithView(viewName, View, options, extra);
-            this.changePage(viewName, v, 'dialog');
+            this.changePage(viewName, v, role);
+        },
+
+        // Create and open view if not already cached.
+        openDialog: function (viewName, View, options, extra) {
+            this.openView(viewName, View, options, extra, 'dialog');
         },
 
         // Change to the given page.
@@ -512,5 +513,22 @@
     // Jackbone.History
     // ----------------
     var history = Jackbone.history = Backbone.history;
+
+    // Initialization
+    // --------------
+
+    // When JQueryMobile is initialized and document is ready,
+    // we can tell client app to start.
+    Jackbone.configureJQM = function () {
+        // Disable JQueryMobile Navigation
+        $.mobile.ajaxEnabled = false;
+        $.mobile.linkBindingEnabled = false;
+        $.mobile.hashListeningEnabled = false;
+        $.mobile.pushStateEnabled = false;
+         
+        // $.mobile.buttonMarkup.hoverDelay = 0
+        // Enable for smooth transitions on iOS
+        $.mobile.touchOverflowEnabled = true;
+    };
 
 }).call(this);

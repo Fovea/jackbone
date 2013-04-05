@@ -45,7 +45,7 @@
         }
     });
 
-    $(document).ready(function () {
+    $(document).ready(function() {
         var router = new MyRouter();
         Jackbone.history.start();
         router.goto('hello');
