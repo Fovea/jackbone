@@ -216,18 +216,21 @@
         // setup relations between header, footer and content.
         this.subviews = [];
         if (header) {
+            // Header may now use direct links to its root view, content and footer.
             header.content = content;
             header.footer  = footer;
             header.root    = this;
             this.subviews.push(header);
         }
         if (footer) {
+            // Footer may now use direct links to its root view, content and header.
             footer.content = content;
             footer.header  = header;
             footer.root    = this;
             this.subviews.push(footer);
         }
         if (content) {
+            // Content view may now use direct links to its root view, header and footer.
             content.header  = header;
             content.footer  = footer;
             content.root    = this;
