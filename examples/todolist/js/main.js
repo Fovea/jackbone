@@ -62,6 +62,7 @@
     var TodoListView = Jackbone.View.extend({
         bindEvents: function () {
             this.listenTo(this.collection, 'all', this.refresh);
+            this.listenTo(this.collection, 'reset', this.refresh);
         },
         render: function () {
             var template = _.template($('#list-template').html());
@@ -88,10 +89,9 @@
         refresh: _.debounce(function () {
             Jackbone.Listview.update(this.$('ul.todo-list'), this.collection, this.update);
             this.$('a[route=' + this.options.route + ']').addClass('ui-btn-active');
-            console.log('refresh');
         }, 25),
         onPageBeforeShow: function () {
-            // this.refresh();
+            this.refresh();
             this.options.refreshModel();
         },
         events: {
@@ -136,7 +136,7 @@
             todos.get(cid).toggle({success: this.options.refreshModel});
         },
         addItem: function(title) {
-            todos.create({title: val}, {success: this.options.refreshModel});
+            todos.create({title: title}, {success: this.options.refreshModel});
         },
         refreshModel: function () {}
     });

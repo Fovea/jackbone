@@ -177,7 +177,11 @@
                     }
                     return false;
                 }
-                $target = $target.parent();
+                var parent = $target.parent();
+                if (parent.length > 0)
+                    $target = parent;
+                else
+                    $target = false;
             }
             return true;
         },
@@ -558,7 +562,6 @@
                     if (c.controller._rootView) {
                         c.controller._rootView.clean();
                         c.controller._rootView.remove();
-                        delete c.controller._rootView;
                     }
                 }
             });
