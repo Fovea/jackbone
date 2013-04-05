@@ -40,6 +40,9 @@
     // And $ as retrieved by Backbone
     var $ = Backbone.$;
 
+    // Create local references to array methods we'll want to use later.
+    var slice = Array.prototype.slice;
+
     // Jackbone is an extension of Backbone
     _.extend(Jackbone, Backbone);
 
@@ -56,29 +59,34 @@
             this.dbStorage = new Backbone.DBStorage(this.dbName, this.dbKey, this.dbColumns);
         }
     };
+    Model.extend = Backbone.Model.extend;
 
     _.extend(Model.prototype, Backbone.Model.prototype, {
     });
-    
+
     // Jackbone.View
     // -------------
     var View = Jackbone.View = function (options) {
         Backbone.View.apply(this, arguments);
+        this.subviews = [];
     };
+    View.extend = Backbone.View.extend;
 
     _.extend(View.prototype, Backbone.View.prototype, {
-        defaultEvent: function (e) {
-            e.preventDefault();
-            var $target = $(e.target);
-            var route = $target.attr('route');
-            Jackbone.router.goto(route);
-            return false;
-        },
         setOptions: function (options) {
             this.options = options;
             if (options.back) {
                 this.back = options.back;
             }
+        },
+        callSubviews: function (method) {
+            var params = slice.call(arguments);
+            params.shift();
+            _.each(this.subviews, function (s) {
+                if (s[method]) {
+                    s[method].apply(s, params);
+                }
+            });
         },
         setup: function () {},
         clean: function () {},
@@ -88,23 +96,42 @@
         onPageBeforeShow: function () {},
         onPageShow: function () {},
         onPageBeforeHide: function () {},
-        onPageHide: function () {}
+        onPageHide: function () {},
+
+        events: {
+            'vclick': 'defaultEvent'
+        },
+        defaultEvent: function (e) {
+            e.preventDefault();
+            var $target = $(e.target);
+            var route = $target.attr('route');
+            Jackbone.router.goto(route);
+            return false;
+        },
+        ignoreEvent: function (e) {
+            if (e && e.preventDefault) {
+                e.preventDefault();
+            }
+            return false;
+        },
     });
 
     // Jackbone.Header
     // ---------------
     var Header = Jackbone.Header = function (options) {
-        Jackbone.View.apply(this, arguments);
+        View.apply(this, arguments);
         this.back = options.back;
     };
+    Header.extend = View.extend;
     _.extend(Header.prototype, Jackbone.View.prototype);
 
     // Jackbone.Footer
     // ---------------
     var Footer = Jackbone.Footer = function (options) {
-        Jackbone.View.apply(this, arguments);
+        View.apply(this, arguments);
         this.back = options.back;
     };
+    Footer.extend = View.extend;
     _.extend(Footer.prototype, Jackbone.View.prototype);
 
     // JQueryMobile View
@@ -118,56 +145,71 @@
         this.needSetup  = true;
 
         // setup relations between header, footer and content.
+        this.subviews = [];
         if (header) {
             header.content = content;
             header.footer  = footer;
             header.root    = this;
+            this.subviews.push(header);
         }
         if (footer) {
             footer.content = content;
             footer.header  = header;
             footer.root    = this;
+            this.subviews.push(footer);
         }
         if (content) {
             content.header  = header;
             content.footer  = footer;
             content.root    = this;
+            this.subviews.push(content);
         }
     };
 
     _.extend(JQMView.prototype, Backbone.View.prototype, {
         // Change options for header, footer and content.
         setOptions: function (options) {
-            if (this.header)  this.header.setOptions(options);
-            if (this.footer)  this.footer.setOptions(options);
-            if (this.content) this.content.setOptions(options);
+            this.callSubviews('setOptions', options);
         },
 
+        // Call methods on subviews (inherited from View)
+        callSubviews: View.prototype.callSubviews,
+
         /** Default render. Sets header, content and footer. */
-        render: function() {
+        render: function () {
             if (this.needRedraw) { // Controllers are responsible of setting needRedraw.
-                // TODO: replace by an 'inlined' html for portability
-                this.$el.html(Templates['page.html']());
+                var $page = $('<div data-role="page" style="display:block"></div>');
 
                 if (this.header) {
-                    this.header.setElement(this.$('div[data-role=header]'));
+                    var $header = $('<div data-role="header"></div>');
+                    this.header.setElement($header);
                     // this.header.setTitle(this.content.title || '');
                     // this.header.setSubtitle(this.content.subtitle || '');
                     // this.header.setBack(this.content.back || {});
                     this.header.render();
+                    $page.append($header);
                 }
+
+                var $content = $('<div class="content" data-role="content"></div>');
+                this.content.setElement($content);
+                this.content.render();
+                if (!this.header) {
+                    $content.css('top', '0');
+                }
+                if (!this.footer) {
+                    $content.css('bottom', '0');
+                }
+                $page.append($content);
 
                 if (this.footer) {
-                    this.footer.setElement(this.$('div[data-role=footer]'));
+                    var $footer = $('<div data-role="footer"></div>');
+                    this.footer.setElement($footer);
                     this.footer.render();
-                }
-                else {
-                    this.$('div[data-role=footer]').remove();
-                    this.$('div[data-role=content]').css('bottom', '0');
+                    $page.append($footer);
                 }
 
-                this.content.setElement(this.$('div[data-role=content]'));
-                this.content.render();
+                this.$el.html('');
+                this.$el.append($page);
 
                 this.needRedraw = false;
             }
@@ -180,7 +222,7 @@
 
             'pagebeforeshow':   '_onPageBeforeShow', // before show transition
             'pageshow': '_onPageShow',               // after  show transition
-            
+
             'pagebeforecreate': '_onPageBeforeCreate', // before create
             'pagecreate':       '_onPageCreate',       // before jqm enhancement
 
@@ -189,65 +231,51 @@
             // 'click':  'ignoreEvent' // Force vclick to be used, all click to be ignored.
         },
         // JQuery Mobile Hack
-        _onPageBeforeHide: function() {
-            if (this.content.onPageBeforeHide) this.content.onPageBeforeHide();
+        _onPageBeforeHide: function () {
+            this.callSubviews('onPageBeforeHide');
             this.clean();
         },
-        _onPageHide: function() {
+        _onPageHide: function () {
             this.undelegateEvents();
-            if (this.content.onPageHide) this.content.onPageHide();
+            this.callSubviews('onPageHide');
         },
-        _onPageBeforeShow: function() {
-            if (this.content.onPageBeforeShow) this.content.onPageBeforeShow();
-            if (this.footer) this.footer.refresh();
-            if (this.header) this.header.refresh();
+        _onPageBeforeShow: function () {
+            this.callSubviews('onPageBeforeShow');
+            // if (this.footer) this.footer.refresh();
+            // if (this.header) this.header.refresh();
             this.enable(); // Make sure the page isn't disabled.
         },
-        _onPageShow: function() {
+        _onPageShow: function () {
             this.setup();
-            if (this.content.onPageShow) this.content.onPageShow();
+            this.callSubviews('onPageShow');
         },
-        _onPageBeforeCreate: function() {
-            if (this.content.onPageBeforeCreate) this.content.onPageBeforeCreate();
+        _onPageBeforeCreate: function () {
+            this.callSubviews('onPageBeforeCreate');
         },
-        _onPageCreate: function() {
-            if (this.content.onPageCreate) this.content.onPageCreate();
+        _onPageCreate: function () {
+            this.callSubviews('onPageCreate');
         },
-        ignoreEvent: function(e) {
-            if (e && e.preventDefault) e.preventDefault();
-            return false;
-        },
-        setup: function() {
+        setup: function () {
             if (this.needSetup) {
-                if (this.footer) {
-                    this.footer.setup();
-                }
-                if (this.header) {
-                    this.header.setup();
-                }
-                if (this.content.setup) this.content.setup();
+                this.callSubviews('setup');
                 this.needSetup = false;
             }
         },
-        clean: function() {
+        clean: function () {
             if (!this.needSetup) {
-                if (this.footer)  this.footer.clean();
-                if (this.header)  this.header.clean();
-                if (this.content) this.content.clean();
+                this.callSubviews('clean');
                 this.needSetup = true;
             }
         },
 
-        refresh: function() {
-            if (this.content) this.content.refresh();
-            if (this.footer)  this.footer.refresh();
-            if (this.header)  this.header.refresh();
+        refresh: function () {
+            this.callSubviews('refresh');
         },
 
-        disable: function() {
+        disable: function () {
             this.$el.addClass('ui-disabled');
         },
-        enable: function() {
+        enable: function () {
             this.$el.removeClass('ui-disabled');
         },
     });
@@ -259,12 +287,12 @@
     // It can be disabled globally by setting this to null
     // or per screen by passing the noHeader option to the
     // ViewManager.
-    Jackbone.DefaultHeaderView = null;
+    Jackbone.DefaultHeader = null;
     // Screens may include a default footer too.
     // It can be disabled globally by setting this to null
     // or per screen by passing the noFooter option to the
     // ViewManager.
-    Jackbone.DefaultFooterView = null;
+    Jackbone.DefaultFooter = null;
 
     // Jackbone.Controller
     // -------------------
@@ -320,18 +348,10 @@
                 var noHeader = (options && options.noHeader) || (!Jackbone.DefaultHeader);
                 var noFooter = (options && options.noFooter) || (!Jackbone.DefaultFooter);
                 var content = new View(options);
-                var header  = noHeader ? null : new DefaultHeader(options);
-                var footer  = noFooter ? null : new DefaultFooter(options);
+                var header  = noHeader ? null : new Jackbone.DefaultHeader(options);
+                var footer  = noFooter ? null : new Jackbone.DefaultFooter(options);
                 view = new JQMView(header, content, footer);
                 this.views[pageUID] = view;
-                if (header == null) {
-                    $(view.el).find("div[data-role=header]").css('display','none');
-                    $(view.el).find("div[data-role=content]").css('top',0);
-                }
-                if (footer == null) {
-                    $(view.el).find("div[data-role=footer]").css('display','none');
-                    $(view.el).find("div[data-role=content]").css('bottom',0);
-                }
             }
             this.currentController = null;
             return view;
@@ -347,6 +367,7 @@
             Jackbone.router = this;
         }
     };
+    Router.extend = Backbone.Router.extend;
 
     // Used to generate page hash tag or HTML attribute.
     // by getPageName and getPageHash.
@@ -383,7 +404,7 @@
 
         // Create and open view if not already cached.
         addView: function (viewName, View, options, extra) {
-            var v = ViewManager.create(viewName, View, options, extra);
+            var v = ViewManager.createWithView(viewName, View, options, extra);
             this.changePage(viewName, v);
         },
 

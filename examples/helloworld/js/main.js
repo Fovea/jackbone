@@ -1,26 +1,20 @@
 (function () {
 
-    var HelloView = Jackbone.View.extends({
+    var HelloView = Jackbone.View.extend({
         render: function () {
             this.$el.html('<h1>Hello</h1>');
             this.$el.append('<input route="world" type="button">Next</input>');
-        },
-        events {
-            'vclick': 'defaultEvent'
         }
     });
 
-    var WorldView = Jackbone.View.extends({
+    var WorldView = Jackbone.View.extend({
         render: function () {
             this.$el.html('<h1>World</h1>');
             this.$el.append('<input route="hello" type="button">Back</input>');
-        },
-        events {
-            'vclick': 'defaultEvent'
         }
     });
 
-    var MyRouter = Jackbone.Router.extends({
+    var MyRouter = Jackbone.Router.extend({
         routes: {
         // Pages
         '':      'hello',
