@@ -46,40 +46,38 @@
     // Jackbone is an extension of Backbone
     _.extend(Jackbone, Backbone);
 
-    // Jackbone.Model
-    // --------------
-
-    // Jackbone **Models** are Backbone Models with a WebSQL backend.
-    // Backbone.dbStorage required!
-    var Model = Jackbone.Model = function (attributes, options) {
-        Backbone.Model.apply(this, arguments);
-        if (this.dbName && this.dbKey && this.dbColumns) {
-            // This model will use dbStorage
-            this.dbStorage = new Backbone.DBStorage(this.dbName, this.dbKey, this.dbColumns);
-        }
-    };
-    Model.extend = Backbone.Model.extend;
-
-    _.extend(Model.prototype, Backbone.Model.prototype, {
-    });
-
     // Jackbone.View
     // -------------
+
+    // Base for all views, Jackbone Views provide necessary methods
+    // for the management of events for hidden but persistant views
+    // (when cached by Jackbone's ViewManager), as well as a child
+    // views hierarchy and JQueryMobile specific callbacks.
     var View = Jackbone.View = function (options) {
         Backbone.View.apply(this, arguments);
+        // List of child views
         this.subviews = [];
+        // Default "Back" button
+        this.back = { title: 'Back', hash: '' };
         this.setOptions(options);
     };
     View.extend = Backbone.View.extend;
 
     _.extend(View.prototype, Backbone.View.prototype, {
+        // Change options for this view and its subviews.
         setOptions: function (options) {
             this.options = options;
+            // options.back can be used to change view 'Back' link.
             if (options.back) {
                 this.back = options.back;
             }
             this.callSubviews('setOptions', options);
+            this.applyOptions();
         },
+
+        // Call the given method for all subviews.
+        // Passing extra arguments is posible, they will be passed
+        // to subviews too.
         callSubviews: function (method) {
             if (this.subviews.length !== 0) {
                 var params = slice.call(arguments);
@@ -91,52 +89,96 @@
                 });
             }
         },
+
+        // Bind and delegate events for this view and its subviews.
         setup: function () {
             this.callSubviews('setup');
+            this.bindEvents();
             this.delegateEvents();
         },
+        // Unbind and undelegate events for this view and its subviews.
         clean: function () {
             this.callSubviews('clean');
+            this.unbindEvents();
             this.undelegateEvents();
         },
+
+        // Called whenever options have been changed.
+        // Overload to run your own custom code.
+        applyOptions: function () {},
+
+        // Called whenever events binding is required.
+        // Overload to bind your own callbacks to events.
+        bindEvents: function () {},
+
+        // Called whenever cleaning of events binding is required.
+        // Overload to unbind your own callbacks to events.
+        unbindEvents: function () {
+        },
+
+        // Called whenever a refresh of you view is required.
+        // The view already has been rendered, so it's better to only
+        // alter it if possible, instead of performing a full re-render.
         refresh: function () {
             this.callSubviews('refresh');
         },
+
+        // Called before the page is enhanced by JQuery Mobile.
+        // Overload for your own use.
         onPageBeforeCreate: function () {
             this.callSubviews('onPageBeforeCreate');
         },
+        // Called when the page is being enhanced by JQuery Mobile.
+        // Overload for your own use.
         onPageCreate: function () {
             this.callSubviews('onPageCreate');
         },
+        // Called before the page starts being transitioned to.
+        // Overload for your own use.
         onPageBeforeShow: function () {
             this.callSubviews('onPageBeforeShow');
         },
+        // Called when the page is done being transitioned to.
+        // Overload for your own use.
         onPageShow: function () {
             this.callSubviews('onPageShow');
         },
+        // Called before the page starts being transitioned from.
+        // Overload for your own use.
         onPageBeforeHide: function () {
             this.callSubviews('onPageBeforeHide');
         },
+        // Called when the page is done being transitioned from.
+        // Overload for your own use.
         onPageHide: function () {
             this.callSubviews('onPageHide');
         },
 
+        // By default, views use a delegated event to check
+        // for clicks on elements that define a "route" attribute.
         events: {
             'vclick': 'defaultEvent'
         },
+
+        // This is the default event handler
         defaultEvent: function (e) {
             e.preventDefault();
             var $target = $(e.target);
             var route = $target.attr('route');
             if (route) {
+                // A route has been defined, follow the link using
+                // Jackbone's default router.
                 if (route === 'back') {
                     Jackbone.router.goto(this.back.hash);
                 } else {
                     Jackbone.router.goto(route);
                 }
+                return false;
             }
-            return false;
+            return true;
         },
+
+        // Provided for conveniance to views williing to ignore certain events.
         ignoreEvent: function (e) {
             if (e && e.preventDefault) {
                 e.preventDefault();
@@ -149,7 +191,6 @@
     // ---------------
     var Header = Jackbone.Header = function (options) {
         View.apply(this, arguments);
-        this.back = options.back;
     };
     Header.extend = View.extend;
     _.extend(Header.prototype, Jackbone.View.prototype);
@@ -158,7 +199,6 @@
     // ---------------
     var Footer = Jackbone.Footer = function (options) {
         View.apply(this, arguments);
-        this.back = options.back;
     };
     Footer.extend = View.extend;
     _.extend(Footer.prototype, Jackbone.View.prototype);
@@ -358,6 +398,7 @@
         // - options.noFooter: disable the footer for this view.
         createWithView: function (name, View, options, extra_options) {
             var view;
+            // pageUID is a unique ID to identify an instance of a View.
             var pageUID = name + JSON.stringify(options);
             // Add extra_options to options
             if (extra_options) {
@@ -370,20 +411,28 @@
                     hash:  options.backhash
                 };
             }
-            // An existing view existed. Make sure it is clean.
+            // This view already exists.
             if (typeof this.views[pageUID] !== 'undefined') {
+                // Retrieve it.
                 view = this.views[pageUID];
+                // Change its options and refresh.
                 view.setOptions(options);
                 view.refresh();
             } else {
+                // Should we create a Header and/or Footer?
                 var noHeader = (options && options.noHeader) || (!Jackbone.DefaultHeader);
                 var noFooter = (options && options.noFooter) || (!Jackbone.DefaultFooter);
+                // Create the main content view.
                 var content = new View(options);
+                // Add headers and footer if required.
                 var header  = noHeader ? null : new Jackbone.DefaultHeader(options);
                 var footer  = noFooter ? null : new Jackbone.DefaultFooter(options);
+                // Build the root view.
                 view = new JQMView(header, content, footer);
+                // Store it in the cache for later retrieval.
                 this.views[pageUID] = view;
             }
+            // No controller is active, this is a Controller-less View.
             this.currentController = null;
             return view;
         }
@@ -391,12 +440,25 @@
 
     // Jackbone.Router
     // ---------------
+
+    // Jackbone Router provide a clean way to navigate through pages
+    // by disabling JQueryMobile's own navigation engine and relying
+    // only on JQueryMobile's changePage method.
+    //
+    // Use goto method or set route attribute to your HTML elements
+    // in order to navigate from view to view.
+    //
+    // Override routes and call openView and openDialog in your own
+    // application's Router.
     var Router = Jackbone.Router = function (options) {
         Backbone.Router.apply(this, arguments);
         // First created router is the default router.
         if (!Jackbone.router) {
             Jackbone.router = this;
-            // It's also a good time to configure JQuery Mobile.
+            // It's also a good time to configure JQuery Mobile,
+            // creating the first router will happen/ before the
+            // first view is opened (obviously, because it is a
+            // Jackbone.Router method).
             Jackbone.configureJQM();
         }
     };
@@ -404,14 +466,19 @@
 
     // Used to generate page hash tag or HTML attribute.
     // by getPageName and getPageHash.
+    // Does it by joining page and arguments using the given
+    // separator.
     var makePageName = function (separator, page, args) {
+        // By default, we return page name without arguments.
         var ret = page;
         if (typeof args !== 'undefined') {
             if (args && args.length) {
+                // Some arguments have been provided, add them.
                 if (args.length !== 0) {
                     ret = page + separator + args.join(separator);
                 }
             } else {
+                // Argument isn't an array, add it.
                 ret = page + separator + args;
             }
         }
@@ -438,6 +505,7 @@
         // Create and open view if not already cached.
         openView: function (viewName, View, options, extra, role) {
             extra || (extra = {});
+            // By default 'Back" will return to previous page.
             if (!extra.backhash) {
                 extra.backhash = this.currentHash;
             }
@@ -455,17 +523,22 @@
             // Extends Views
             // Create JQuery Mobile Page
             var isExistingPage = $('div[page-name=' + pageName.toLowerCase() + ']');
+            // Select the transition to apply.
             var t = this.selectTransition(pageName, role);
+            // For already existing pages, only delegate events so they can handle
+            // onPageBeforeShow and onPageShow.
             if (isExistingPage.length === 1) {
                 page.delegateEvents();
             } else {
-                // Create a page that should render quickly
+                // Create the page, store its page name in an attribute
+                // so it can be retrieved later.
                 page.$el.attr('page-name', pageName.toLowerCase());
                 page.$el.addClass('page-container');
+                // Render it and add it in the DOM.
                 page.render();
                 $('body').append(page.$el);
             }
-            // Perform transition
+            // Perform transition using JQuery Mobile
             $.mobile.changePage(page.$el, {
                 changeHash:    false,
                 transition:    t.transition,
@@ -473,40 +546,52 @@
                 role:          role,
                 pageContainer: page.$el
             });
+            // Current hash is stored so a subsequent openView can know
+            // which page it comes from.
             this.currentHash = Jackbone.history.getFragment();
         },
 
+        // Known transitions, allow us to do reverse transitions from B->A
+        // when transition A->B already has been performed.
+        // Works ideally on herarchical navigation structures, for other structures
+        // just use 'fade' transitions (or other non-directional transitions).
         transitions: {},
+
+        // Return parameters of the transition to use to switch to pageName
+        // It's context dependant, meaning this method remembers the currently viewed
+        // view and determine the transition accordingly.
         selectTransition: function (pageName, role) {
             var lastPageName     = this.currentPageName || '';
             var lastPageRole     = this.currentPageRole || '';
             this.currentPageName = pageName;
             this.currentPageRole = role;
 
-            // Dialogs will pop.
-            if (role === 'dialog') {
-                return { transition: $.mobile.defaultDialogTransition, reverse: false };
-            }
-            if (lastPageRole === 'dialog') {
-                return { transition: $.mobile.defaultDialogTransition, reverse: true };
-            }
-
+            // Known transition, return it.
             if (_(this.transitions).has(lastPageName + '-->' + pageName)) {
                 return this.transitions[lastPageName + '-->' + pageName];
             }
 
+            // Use JQueryMobile default page transition.
+            var transition = $.mobile.defaultPageTransition;
+
+            // Except for dialogs.
+            if ((role === 'dialog') || (lastPageRole === 'dialog')) {
+                // Use JQueryMobile default dialog transition.
+                transition = $.mobile.defaultDialogTransition;
+            }
+
             // Save the transition
             this.transitions[lastPageName + '-->' + pageName] = {
-                transition: $.mobile.defaultPageTransition,
+                transition: transition,
                 reverse: false
             };
             this.transitions[pageName + '-->' + lastPageName] = {
-                transition: $.mobile.defaultPageTransition,
+                transition: transition,
                 reverse: true
             };
 
-            // Others just use default transition.
-            return { transition: $.mobile.defaultPageTransition, reverse: false };
+            // And return it.
+            return { transition: transition, reverse: false };
         }
     });
 
