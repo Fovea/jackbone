@@ -105,7 +105,9 @@
             e.preventDefault();
             var $target = $(e.target);
             var route = $target.attr('route');
-            Jackbone.router.goto(route);
+            if (route) {
+                Jackbone.router.goto(route);
+            }
             return false;
         },
         ignoreEvent: function (e) {
@@ -403,7 +405,7 @@
         },
 
         // Create and open view if not already cached.
-        addView: function (viewName, View, options, extra) {
+        openView: function (viewName, View, options, extra) {
             var v = ViewManager.createWithView(viewName, View, options, extra);
             this.changePage(viewName, v);
         },
