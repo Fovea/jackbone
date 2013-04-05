@@ -51,7 +51,6 @@
 
     // Jackbone **Models** are Backbone Models with a WebSQL backend.
     // Backbone.dbStorage required!
-
     var Model = Jackbone.Model = function (attributes, options) {
         Backbone.Model.apply(this, arguments);
         if (this.dbName && this.dbKey && this.dbColumns) {
@@ -69,6 +68,7 @@
     var View = Jackbone.View = function (options) {
         Backbone.View.apply(this, arguments);
         this.subviews = [];
+        this.setOptions(options);
     };
     View.extend = Backbone.View.extend;
 
@@ -78,25 +78,48 @@
             if (options.back) {
                 this.back = options.back;
             }
+            this.callSubviews('setOptions', options);
         },
         callSubviews: function (method) {
-            var params = slice.call(arguments);
-            params.shift();
-            _.each(this.subviews, function (s) {
-                if (s[method]) {
-                    s[method].apply(s, params);
-                }
-            });
+            if (this.subviews.length !== 0) {
+                var params = slice.call(arguments);
+                params.shift();
+                _.each(this.subviews, function (s) {
+                    if (s[method]) {
+                        s[method].apply(s, params);
+                    }
+                });
+            }
         },
-        setup: function () {},
-        clean: function () {},
-        refresh: function () {},
-        onPageBeforeCreate: function () {},
-        onPageCreate: function () {},
-        onPageBeforeShow: function () {},
-        onPageShow: function () {},
-        onPageBeforeHide: function () {},
-        onPageHide: function () {},
+        setup: function () {
+            this.callSubviews('setup');
+            this.delegateEvents();
+        },
+        clean: function () {
+            this.callSubviews('clean');
+            this.undelegateEvents();
+        },
+        refresh: function () {
+            this.callSubviews('refresh');
+        },
+        onPageBeforeCreate: function () {
+            this.callSubviews('onPageBeforeCreate');
+        },
+        onPageCreate: function () {
+            this.callSubviews('onPageCreate');
+        },
+        onPageBeforeShow: function () {
+            this.callSubviews('onPageBeforeShow');
+        },
+        onPageShow: function () {
+            this.callSubviews('onPageShow');
+        },
+        onPageBeforeHide: function () {
+            this.callSubviews('onPageBeforeHide');
+        },
+        onPageHide: function () {
+            this.callSubviews('onPageHide');
+        },
 
         events: {
             'vclick': 'defaultEvent'
@@ -106,7 +129,11 @@
             var $target = $(e.target);
             var route = $target.attr('route');
             if (route) {
-                Jackbone.router.goto(route);
+                if (route === 'back') {
+                    Jackbone.router.goto(this.back.hash);
+                } else {
+                    Jackbone.router.goto(route);
+                }
             }
             return false;
         },
@@ -290,6 +317,7 @@
     // or per screen by passing the noHeader option to the
     // ViewManager.
     Jackbone.DefaultHeader = null;
+
     // Screens may include a default footer too.
     // It can be disabled globally by setting this to null
     // or per screen by passing the noFooter option to the
@@ -346,6 +374,7 @@
             if (typeof this.views[pageUID] !== 'undefined') {
                 view = this.views[pageUID];
                 view.setOptions(options);
+                view.refresh();
             } else {
                 var noHeader = (options && options.noHeader) || (!Jackbone.DefaultHeader);
                 var noFooter = (options && options.noFooter) || (!Jackbone.DefaultFooter);
@@ -410,6 +439,16 @@
             this.changePage(viewName, v);
         },
 
+        // Create and open view if not already cached.
+        openDialog: function (viewName, View, options, extra) {
+            extra || (extra = {});
+            if (!extra.backhash) {
+                extra.backhash = this.currentHash;
+            }
+            var v = ViewManager.createWithView(viewName, View, options, extra);
+            this.changePage(viewName, v, 'dialog');
+        },
+
         // Change to the given page.
         changePage: function (pageName, page, role) {
             // Extends Views
@@ -443,18 +482,12 @@
             this.currentPageName = pageName;
             this.currentPageRole = role;
 
-            // Transitions can be disabled from settings
-            /* TODO
-            if (Collections.settings.getSetting("UseTransitions", 'false') === 'false')
-                return { transition: 'none', reverse: false };
-            */
-
             // Dialogs will pop.
             if (role === 'dialog') {
-                return { transition: 'pop', reverse: false };
+                return { transition: $.mobile.defaultDialogTransition, reverse: false };
             }
             if (lastPageRole === 'dialog') {
-                return { transition: 'pop', reverse: true };
+                return { transition: $.mobile.defaultDialogTransition, reverse: true };
             }
 
             if (_(this.transitions).has(lastPageName + '-->' + pageName)) {
