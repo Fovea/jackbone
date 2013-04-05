@@ -15,8 +15,8 @@
         },
 
         // Toggle the `done` state of this todo item.
-        toggle: function() {
-            this.save({done: !this.get("done")});
+        toggle: function(options) {
+            this.save({done: !this.get("done")}, options);
         }
     });
 
@@ -61,11 +61,14 @@
     // List of Todo elements.
     var TodoListView = Jackbone.View.extend({
         bindEvents: function () {
-            this.listenTo(todos, 'change', this.refresh);
+            this.listenTo(this.collection, 'all', this.refresh);
         },
         render: function () {
             var template = _.template($('#list-template').html());
             this.$el.html(template());
+            if (!this.options.addItem) {
+                this.$('#text-new-todo').remove();
+            }
             return this;
         },
         update: {
@@ -82,21 +85,28 @@
                 return $li;
             }
         },
-        refresh: function () {
-            Jackbone.Listview.update(this.$('ul'), todos, this.update);
+        refresh: _.debounce(function () {
+            Jackbone.Listview.update(this.$('ul.todo-list'), this.collection, this.update);
+            this.$('a[route=' + this.options.route + ']').addClass('ui-btn-active');
+            console.log('refresh');
+        }, 25),
+        onPageBeforeShow: function () {
+            // this.refresh();
+            this.options.refreshModel();
         },
         events: {
-            'vclick': 'clickDelegate', // Keep using default event handler.
+            'vclick': 'defaultEvent',
+            'vclick ul.todo-list': 'clickDelegate',
             'keypress #text-new-todo': 'submitNewTodo'
         },
         submitNewTodo: function (e) {
-            if (e.keyCode != 13) return;
+            if (e.keyCode !== 13) return;
             e.preventDefault();
             var $input = $(e.target);
             var val = $input.val();
             if (val) {
                 $input.val('');
-                todos.create({title: val});
+                this.options.addItem(val);
             }
         },
         clickDelegate: function (e) {
@@ -104,10 +114,55 @@
             var $el = $(e.target);
             var cid = $el.attr('todo-cid');
             if (cid) {
-                todos.get(cid).toggle();
-                return true;
+                this.options.toggleItem(cid);
             }
-            return this.defaultEvent(e);
+            return false;
+        }
+    });
+
+    var FullListController = Jackbone.Controller.extend({
+        initialize: function() {
+            this.addOptions();
+            this.view = new TodoListView(this.options);
+        },
+        addOptions: function () {
+            this.options.route = 'list';
+            this.options.collection = todos;
+            this.options.toggleItem = _.bind(this.toggleItem, this);
+            this.options.addItem = _.bind(this.addItem, this);
+            this.options.refreshModel = _.bind(this.refreshModel, this);
+        },
+        toggleItem: function(cid) {
+            todos.get(cid).toggle({success: this.options.refreshModel});
+        },
+        addItem: function(title) {
+            todos.create({title: val}, {success: this.options.refreshModel});
+        },
+        refreshModel: function () {}
+    });
+
+    var DoneListController = FullListController.extend({
+        addOptions: function() {
+            this.options.route = 'done';
+            this.options.collection = new TodoList(todos.done());
+            this.options.toggleItem = _.bind(this.toggleItem, this);
+            this.options.refreshModel = _.bind(this.refreshModel, this);
+        },
+        refreshModel: function () {
+            this.options.collection.reset(todos.done());
+        }
+    });
+
+    var TodoListController = FullListController.extend({
+        addOptions: function() {
+            this.options.route = 'todo';
+            this.options.collection = new TodoList(todos.remaining());
+            this.options.toggleItem = _.bind(this.toggleItem, this);
+            this.options.addItem = _.bind(this.addItem, this);
+            this.options.refreshModel = _.bind(this.refreshModel, this);
+        },
+        refreshModel: function () {
+            this.options.collection.reset(todos.remaining());
         }
     });
 
@@ -124,6 +179,8 @@
             // Pages
             '':         'openList',
             'list':     'openList',
+            'done':     'openDoneList',
+            'todo':     'openTodoList',
             'todo?:id': 'openTodo',
             'about':    'openAbout',
             // Default - catch all
@@ -133,7 +190,13 @@
             this.openDialog('About', AboutView, {});
         },
         openList: function () {
-            this.openView('List', TodoListView, {});
+            this.openViewController('List', FullListController, {});
+        },
+        openDoneList: function () {
+            this.openViewController('Done', DoneListController, {});
+        },
+        openTodoList: function () {
+            this.openViewController('Todo', TodoListController, {});
         },
         openTodo: function (id) {
             // this.openView('Dummy', TodoItemView, {});

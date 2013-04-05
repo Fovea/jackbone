@@ -165,16 +165,19 @@
         defaultEvent: function (e) {
             e.preventDefault();
             var $target = $(e.target);
-            var route = $target.attr('route');
-            if (route) {
-                // A route has been defined, follow the link using
-                // Jackbone's default router.
-                if (route === 'back') {
-                    Jackbone.router.goto(this.back.hash);
-                } else {
-                    Jackbone.router.goto(route);
+            while ($target) {
+                var route = $target.attr('route');
+                if (route) {
+                    // A route has been defined, follow the link using
+                    // Jackbone's default router.
+                    if (route === 'back') {
+                        Jackbone.router.goto(this.back.hash);
+                    } else {
+                        Jackbone.router.goto(route);
+                    }
+                    return false;
                 }
-                return false;
+                $target = $target.parent();
             }
             return true;
         },
@@ -469,9 +472,10 @@
 
     var Controller = Jackbone.Controller = function (options) {
         this._configure(options || {});
-        this.initialize.call(this, options);
-        this.view = this.createView(this.options);
+        this.view = null;
+        this.initialize.call(this);
     };
+    Controller.extend = View.extend;
 
     // List of controller options to be merged as properties.
     var controllerOptions = ['model', 'collection'];
@@ -482,17 +486,12 @@
             callback();
         },
 
-        // Initialize the controller
-        initialize: function (options) {
+        // Initialize the controller.
+        // this.view has to be instanciated here.
+        initialize: function () {
             // Prepare options to be sent to the view.
             this.options.onRefresh = _.bind(this.refresh, this);
-        },
-
-        // Factory method, returns a newly created view.
-        // Override to create your own View.
-        createView: function (options) {
-            // this.view = new View(this.options);
-            return null;
+            this.view = null;
         },
 
         // Destroy the controller, its views and models.
@@ -633,7 +632,7 @@
         // - options.backhash: force the page to go back to.
         // - options.noHeader: disable the header for this view.
         // - options.noFooter: disable the footer for this view.
-        createWithController: function (name, Controller, options) {
+        createWithController: function (name, Controller, options, extra_options) {
             // Run Controller Garbage Collector
             this.runGC += 1;
             if (this.runGC > 5) {
@@ -643,6 +642,17 @@
             // Create Controller if not exists.
             var ctrl = null;
             var pageUID = name + JSON.stringify(options);
+            // Add extra_options to options
+            if (extra_options) {
+                options = _.extend(options, extra_options);
+            }
+            // Adjust the backhash option
+            if (options && options.backhash) {
+                options.back = {
+                    title: options.backtitle || 'Back',
+                    hash:  options.backhash
+                };
+            }
             if (typeof this.controllers[pageUID] !== 'undefined') {
                 ctrl = this.controllers[pageUID].controller;
             } else {
@@ -746,9 +756,27 @@
             this.changePage(viewName, v, role);
         },
 
-        // Create and open view if not already cached.
+        // Create and open dialog if not already cached.
         openDialog: function (viewName, View, options, extra) {
             this.openView(viewName, View, options, extra, 'dialog');
+        },
+
+        // Create and open view with a controller if not already cached.
+        openViewController: function (ctrlName, Controller, options, extra, role) {
+            if (!extra) {
+                extra = {};
+            }
+            // By default 'Back" will return to previous page.
+            if (!extra.backhash) {
+                extra.backhash = this.currentHash;
+            }
+            var v = ViewManager.createWithController(ctrlName, Controller, options, extra);
+            this.changePage(ctrlName, v, role);
+        },
+
+        // Create and open dialog with a controller if not already cached.
+        openDialogController: function (ctrlName, Controller, options, extra, role) {
+            this.openViewController(ctrlName, Controller, options, extra, 'dialog');
         },
 
         // Change to the given page.

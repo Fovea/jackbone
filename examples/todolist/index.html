@@ -27,8 +27,15 @@
 </head>
 <body>
 <script type="text/template" id="list-template">
+<div data-role="navbar">
+    <ul>
+        <li><a route='list'>All</a></li>
+        <li><a route='todo'>Todo</a></li>
+        <li><a route='done'>Done</a></li>
+    </ul>
+</div>
 <input type="text" name="text-new-todo" id="text-new-todo" value="" placeholder="Enter a new TODO">
-<ul data-role="listview" data-inset="true"></ul>
+<ul class="todo-list" data-role="listview" data-inset="true"></ul>
 <input type="button" route="about" value="About" />
 </script>
 </body>
