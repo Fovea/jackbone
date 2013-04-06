@@ -17,7 +17,7 @@ Developing Backbone + JQuery Mobile javascript applications is possible, but it'
 Summary
 -------
 
-Jackbone is a utility library that aims to structure the development of rich HTML5 applications using JQuery Mobile, by extending the Backbone framework. It heavily relies on Backbone, offering specialized classes for your **views** and **router**. Additionaly, it defines a **controller** interface, provide a **view manager** that takes care of handing life and death of the Views and Controllers of your application.
+Jackbone is a utility library that aims to structure the development of rich HTML5 applications using JQuery Mobile, by extending the Backbone framework. It heavily relies on Backbone, offering specialized classes for your **views** and **router**. Additionaly, it defines a **controller** interface, provide a **view manager** that handles life and death of the Views and Controllers of your application.
 
 Licence
 -------
@@ -26,14 +26,20 @@ Licence
 
 Jackbone is available for use under the MIT software license.
 
+Code for this library was initially extracted from a work for FlightWatching's Checklist application.
+
 Documentation
 =============
 
+Make sure you've read Backbone documentation first. This documentation will only cover the additions and differences between Jackbone and Backbone.
+
 ##Jackbone.View##
 
-Jackbone views are basically Backbone views with extra features.
-
-Views provide necessary methods for the management of events for hidden but persistant views (when cached by Jackbone's ViewManager), as well as a child views hierarchy and JQueryMobile specific callbacks.
+Jackbone views are basically Backbone views with extra features like:
+  * necessary methods for the management of events binding for hidden but non-deleted views
+     * (when cached by Jackbone's ViewManager)
+  * a child views hierarchy.
+  * JQueryMobile specific callbacks.
 
 ###subviews `object.subviews`
 Array of subviews for this view.
@@ -84,3 +90,15 @@ Called before the page starts being transitioned from.
 ###onPageHide `object.onPageHide()`
 Called when the page is done being transitioned from.
 *Overload* for your own use.
+
+###events `object.events`
+    events: {
+        'vclick': 'defaultEvent'
+    }
+By default, views use a delegated event to check for clicks on elements that define a "route" attribute. **defaultEvent()** will open the page pointed by the route.
+
+###defaultEvent `object.defaultEvent(ev)`
+This is the default event handler.
+
+###ignoreEvent `object.ignoreEvent(ev)`
+Provided for conveniance to views willing to ignore certain events.
