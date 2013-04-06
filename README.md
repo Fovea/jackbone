@@ -33,6 +33,10 @@ Documentation
 
 Make sure you've read Backbone documentation first. This documentation will only cover the additions and differences between Jackbone and Backbone.
 
+Maybe you'd like to check-out some examples first?
+  * Simple: [Hello World](https://github.com/Fovea/jackbone/blob/master/examples/helloworld/js/main.js)
+  * More advanced: [Todo List](https://github.com/Fovea/jackbone/blob/master/examples/todolist/js/main.js)
+
 ##Jackbone.View##
 
 Jackbone views are basically Backbone views with extra features like:
