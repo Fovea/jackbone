@@ -28,7 +28,7 @@
 
     // Require Backbone
     var Backbone = root.Backbone;
-    if (!Jackbone.Backbone && (typeof require !== 'undefined')) {
+    if (!Backbone && (typeof require !== 'undefined')) {
         Backbone = require('backbone');
     }
 
