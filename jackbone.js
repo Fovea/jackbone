@@ -757,11 +757,12 @@
             }
             var v = ViewManager.createWithView(viewName, View, options, extra);
             this.changePage(viewName, v, role);
+            return v;
         },
 
         // Create and open dialog if not already cached.
         openDialog: function (viewName, View, options, extra) {
-            this.openView(viewName, View, options, extra, 'dialog');
+            return this.openView(viewName, View, options, extra, 'dialog');
         },
 
         // Create and open view with a controller if not already cached.
@@ -775,6 +776,7 @@
             }
             var v = ViewManager.createWithController(ctrlName, Controller, options, extra);
             this.changePage(ctrlName, v, role);
+            return v;
         },
 
         // Create and open dialog with a controller if not already cached.
