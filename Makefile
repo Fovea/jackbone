@@ -15,11 +15,18 @@ min: build
 lint: configure
 	@node_modules/jslint/bin/jslint.js --nomen --plusplus --vars ${SRC_FILE}
 
+tests: check-phantomjs
+	@phantomjs tools/phantom-qunit-runner.js tests/init.html
+	@phantomjs tools/phantom-qunit-runner.js tests/navigation.html
+
 configure: check-npm
 	@npm install
 
 check-npm:
 	@which npm > /dev/null || ( echo 'Please Install Node Package Manager, http://nodejs.org/'; exit 1 )
 
-all: build doc lint
+check-phantomjs:
+	@which phantomjs > /dev/null || ( echo 'Please PhantomJS, http://phantomjs.org/'; exit 1 )
+
+all: build doc lint tests
 	@echo 'done'

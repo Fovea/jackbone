@@ -884,4 +884,4 @@
         $.mobile.touchOverflowEnabled = true;
     };
 
-}.bind(this)());
+}).call(this);
