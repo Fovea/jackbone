@@ -15,7 +15,7 @@
     },
     "devDependencies": {
         "docco": "0.6.1",
-        "jslint": "latest"
+        "jshint": "latest"
     },
     "main"          : "jackbone.js",
     "version"       : "0.1.2",

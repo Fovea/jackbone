@@ -193,7 +193,7 @@
                 e.preventDefault();
             }
             return false;
-        },
+        }
     });
 
     // Jackbone.Header
@@ -305,7 +305,7 @@
             'pageshow': '_onPageShow',               // after  show transition
 
             'pagebeforecreate': '_onPageBeforeCreate', // before create
-            'pagecreate':       '_onPageCreate',       // before jqm enhancement
+            'pagecreate':       '_onPageCreate'        // before jqm enhancement
 
             //'swiperight': 'triggerGoBack',
             //'swipeleft':  'triggerGoNext',
@@ -358,7 +358,7 @@
         },
         enable: function () {
             this.$el.removeClass('ui-disabled');
-        },
+        }
     });
 
     // Listview Helper
