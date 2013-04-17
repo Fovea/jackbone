@@ -10,7 +10,7 @@ min: build
 	@echo 'min'
 
 lint: configure
-	@node_modules/jslint/bin/jslint.js --nomen --vars ${SRC_FILE}
+	@node_modules/jslint/bin/jslint.js --nomen --plusplus --vars ${SRC_FILE}
 
 configure: check-npm
 	@npm install

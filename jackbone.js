@@ -178,10 +178,11 @@
                     return false;
                 }
                 var parent = $target.parent();
-                if (parent.length > 0)
+                if (parent.length > 0) {
                     $target = parent;
-                else
+                } else {
                     $target = false;
+                }
             }
             return true;
         },
@@ -408,7 +409,7 @@
             var li = ul.find('li');
             var json = _(collection.models).map(function (m) {
                 var ret = _.clone(m.attributes);
-                _.extend(ret, { id:m.id, cid:m.cid });
+                _.extend(ret, { id: m.id, cid: m.cid });
                 return ret;
             });
             this.updateJSON(ul, json, updater);
@@ -883,4 +884,4 @@
         $.mobile.touchOverflowEnabled = true;
     };
 
-}).call(this);
+}.bind(this)());
