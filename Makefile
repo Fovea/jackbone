@@ -30,3 +30,7 @@ check-phantomjs:
 
 all: build doc lint tests
 	@echo 'done'
+
+clean:
+	@find . -name '*~' -exec rm '{}' ';'
+	@rm -fr docs/docco.css docs/index.html docs/jackbone.html docs/public/
