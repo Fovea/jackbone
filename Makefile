@@ -13,7 +13,7 @@ min: build
 	@echo 'min'
 
 lint: configure
-	@node_modules/jshint/bin/jshint.js ${SRC_FILE}
+	@node_modules/jshint/bin/jshint ${SRC_FILE}
 
 tests: check-phantomjs
 	@phantomjs tools/phantom-qunit-runner.js tests/init.html
