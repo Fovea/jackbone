@@ -24,7 +24,7 @@
     }
 
     // Current version of the library. Keep in sync with `package.json`.
-    Jackbone.VERSION = '0.1.0';
+    Jackbone.VERSION = '0.1.4';
 
     // Require Backbone
     var Backbone = root.Backbone;

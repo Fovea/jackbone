@@ -1,6 +1,8 @@
 SRC_FILE=jackbone.js
+VERSION_1="$(shell cat jackbone.js | grep VERSION | cut -d\' -f2)"
+VERSION_2="$(shell cat package.json | grep version | cut -d\" -f4)"
 
-build: lint minify doc
+build: check-version lint minify doc
 	@echo 'build'
 
 doc: configure
@@ -28,9 +30,17 @@ check-npm:
 check-phantomjs:
 	@which phantomjs > /dev/null || ( echo 'Please PhantomJS, http://phantomjs.org/'; exit 1 )
 
+check-version:
+	@[ ${VERSION_1} != ${VERSION_2} ] && echo "ERROR: Version in jackbone.js(${VERSION_1}) and package.json(${VERSION_2}) do not correspond."
+	@[ ${VERSION_1} != ${VERSION_2} ] && exit 1
+	@echo "Jackbone version: ${VERSION_1}"
+
 all: build tests
 	@echo 'done'
 
 clean:
 	@find . -name '*~' -exec rm '{}' ';'
 	@rm -fr docs/docco.css docs/index.html docs/jackbone.html docs/public/
+
+publish: check-npm clean build tests
+	@npm publish
