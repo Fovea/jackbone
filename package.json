@@ -14,10 +14,11 @@
         "backbone"   : ">=1.0.0"
     },
     "devDependencies": {
-        "docco": "0.6.1",
-        "jshint": "latest"
+        "docco": "latest",
+        "jshint": "latest",
+        "uglify-js": "latest"
     },
     "main"          : "jackbone.js",
-    "version"       : "0.1.2",
+    "version"       : "0.1.3",
     "license"       : "MIT"
 }

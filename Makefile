@@ -1,19 +1,19 @@
 SRC_FILE=jackbone.js
 
-build: configure
+build: lint minify doc
 	@echo 'build'
 
 doc: configure
-	@node_modules/docco/bin/docco ${SRC_FILE}
+	@node_modules/.bin/docco ${SRC_FILE}
 	@cat docs/header.html > docs/index.html
 	@./tools/Markdown_1.0.1/Markdown.pl --html4tags README.md >> docs/index.html
 	@cat docs/footer.html >> docs/index.html
 
-min: build
-	@echo 'min'
+minify: configure
+	@node_modules/.bin/uglifyjs jackbone.js --lint --compress warnings=true --mangle --output jackbone.min.js
 
 lint: configure
-	@node_modules/jshint/bin/jshint ${SRC_FILE}
+	@node_modules/.bin/jshint ${SRC_FILE}
 
 tests: check-phantomjs
 	@phantomjs tools/phantom-qunit-runner.js tests/init.html
@@ -28,7 +28,7 @@ check-npm:
 check-phantomjs:
 	@which phantomjs > /dev/null || ( echo 'Please PhantomJS, http://phantomjs.org/'; exit 1 )
 
-all: build doc lint tests
+all: build tests
 	@echo 'done'
 
 clean:
