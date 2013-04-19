@@ -24,7 +24,7 @@
         Jackbone.history.start();
         router.goto('myview');
 
-        test("Initialization test", function () {
+        test("Initialization test", function (test) {
             TestChain.init();
             TestChain.add(0,0, function () { ok($('h1#myview').length == 1, "Passed!"); }, 1);
             TestChain.start();

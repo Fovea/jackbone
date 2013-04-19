@@ -3,7 +3,7 @@ VERSION_1=$(shell cat jackbone.js | grep VERSION | cut -d\' -f2)
 VERSION_2=$(shell cat package.json | grep version | cut -d\" -f4)
 
 build: check-version lint minify doc
-	@echo 'build'
+	@echo 'Build done'
 
 doc: configure
 	@node_modules/.bin/docco ${SRC_FILE}
@@ -35,7 +35,7 @@ check-version:
 	@test "${VERSION_1}" != "${VERSION_2}" && exit 1 || exit 0
 
 all: build tests
-	@echo 'done'
+	@echo 'OK'
 
 clean:
 	@find . -name '*~' -exec rm '{}' ';'
