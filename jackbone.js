@@ -54,11 +54,14 @@
     // (when cached by Jackbone's ViewManager), as well as a child
     // views hierarchy and JQueryMobile specific callbacks.
     var View = Jackbone.View = function (options) {
-        Backbone.View.apply(this, arguments);
+
         // List of child views
         this.subviews = [];
+
         // Default "Back" button
         this.back = { title: 'Back', hash: '' };
+
+        Backbone.View.apply(this, arguments);
         this.setOptions(options);
     };
     View.extend = Backbone.View.extend;
@@ -72,7 +75,7 @@
                 this.back = options.back;
             }
             this.callSubviews('setOptions', options);
-            this.applyOptions();
+            this.applyOptions(options);
         },
 
         // Call the given method for all subviews.
@@ -198,7 +201,7 @@
 
     // Jackbone.Header
     // ---------------
-    var Header = Jackbone.Header = function (options) {
+    var Header = Jackbone.Header = function () {
         View.apply(this, arguments);
     };
     Header.extend = View.extend;
@@ -206,7 +209,7 @@
 
     // Jackbone.Footer
     // ---------------
-    var Footer = Jackbone.Footer = function (options) {
+    var Footer = Jackbone.Footer = function () {
         View.apply(this, arguments);
     };
     Footer.extend = View.extend;
@@ -373,7 +376,7 @@
     // setLi will adjust the content of jQuery li element
     //     according to the given JSON model.
     // newLi will create a new li element from given JSON model.
-    var Listview = Jackbone.Listview = {
+    Jackbone.Listview = {
         // Parameters
         // ul: a jQuery ul element
         // collection: JSON collection
@@ -405,8 +408,6 @@
         // collection: Backbone collection
         // updater, a ListviewUpdater (see above)
         update: function (ul, collection, updater) {
-            var i = 0;
-            var li = ul.find('li');
             var json = _(collection.models).map(function (m) {
                 var ret = _.clone(m.attributes);
                 _.extend(ret, { id: m.id, cid: m.cid });
@@ -478,7 +479,7 @@
     var Controller = Jackbone.Controller = function (options) {
         this._configure(options || {});
         this.view = null;
-        this.initialize.call(this);
+        this.initialize.apply(this, arguments);
     };
     Controller.extend = View.extend;
 
@@ -695,7 +696,7 @@
     //
     // Override routes and call openView and openDialog in your own
     // application's Router.
-    var Router = Jackbone.Router = function (options) {
+    var Router = Jackbone.Router = function (/*options*/) {
         Backbone.Router.apply(this, arguments);
         // First created router is the default router.
         if (!Jackbone.router) {
@@ -781,7 +782,7 @@
         },
 
         // Create and open dialog with a controller if not already cached.
-        openDialogController: function (ctrlName, Controller, options, extra, role) {
+        openDialogController: function (ctrlName, Controller, options, extra) {
             this.openViewController(ctrlName, Controller, options, extra, 'dialog');
         },
 
@@ -865,7 +866,7 @@
 
     // Jackbone.History
     // ----------------
-    var history = Jackbone.history = Backbone.history;
+    Jackbone.history = Backbone.history;
 
     // Initialization
     // --------------
