@@ -1,0 +1,346 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Jackbone by Fovea</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Jackbone</h1>
+        <p>JQuery Mobile meets Backbone</p>
+        <p class="view"><a href="https://github.com/Fovea/jackbone">View the Project on GitHub <small>Fovea/jackbone</small></a></p>
+        <ul>
+          <li><a href="https://github.com/Fovea/jackbone/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/Fovea/jackbone/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/Fovea/jackbone">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>Jackbone.js</h1>
+
+<h2>Why use Jackbone?</h2>
+
+<p>Developing Backbone + JQuery Mobile javascript applications is possible, but it's a pain. Jackbone is here to make it as easy as it should.</p>
+
+<h2>Summary</h2>
+
+<p>Jackbone is a utility library that aims to structure the development of rich HTML5 applications using JQuery Mobile, by extending the Backbone framework. It heavily relies on Backbone, offering specialized classes for your <strong>views</strong> and <strong>router</strong>. Additionaly, it defines a <strong>controller</strong> interface, provide a <strong>view manager</strong> that handles life and death of the Views and Controllers of your application.</p>
+
+<h2>Licence</h2>
+
+<p>(c) 2013, Jean-Christophe Hoelt, Fovea.cc</p>
+
+<p>Jackbone is available for use under the MIT software license.</p>
+
+<p>Code for this library was initially extracted from a work for FlightWatching's Checklist application.</p>
+
+<h1>Documentation</h1>
+
+<p>Make sure you've read Backbone documentation first. This documentation will only cover the additions and differences between Jackbone and Backbone.</p>
+
+<p>Maybe you'd like to check-out some examples first?</p>
+
+<ul>
+<li>Simple: <a href="https://github.com/Fovea/jackbone/blob/master/examples/helloworld/js/main.js">Hello World</a>
+</li>
+<li>More advanced: <a href="https://github.com/Fovea/jackbone/blob/master/examples/todolist/js/main.js">Todo List</a>
+</li>
+</ul><h2>Jackbone.View</h2>
+
+<p>Jackbone views are basically Backbone views with extra features like:</p>
+
+<ul>
+<li>necessary methods for the management of events binding for hidden but non-deleted views
+
+<ul>
+<li>(when cached by Jackbone's ViewManager)</li>
+</ul>
+</li>
+<li>a child views hierarchy.</li>
+<li>JQueryMobile specific callbacks.</li>
+</ul><h3>subviews <code>object.subviews</code>
+</h3>
+
+<p>Array of subviews for this view. Manipulate directly.</p>
+
+<h3>setOptions <code>object.setOptions(options)</code>
+</h3>
+
+<p>Change options for this view and its subviews.</p>
+
+<h3>applyOptions <code>object.applyOptions()</code>
+</h3>
+
+<p>Called whenever options have been changed.
+<em>Overload</em> it to run your own custom code.</p>
+
+<h3>callSubviews <code>object.callSubviews(method, arguments...)</code>
+</h3>
+
+<p>Call the given method for all subviews.
+Passing extra arguments is posible, they will be passed to subviews too.</p>
+
+<h3>bindEvents <code>object.bindEvents()</code>
+</h3>
+
+<p>Called whenever events binding is required.
+<em>Overload</em> it to bind your own callbacks to events.</p>
+
+<h3>unbindEvents <code>object.unbindEvents()</code>
+</h3>
+
+<p>Called whenever cleaning of events binding is required.
+<em>Overload</em> it to unbind your own callbacks to events.</p>
+
+<h3>refresh <code>object.refresh()</code>
+</h3>
+
+<p>Called whenever a refresh of you view is required.
+The view already has been rendered, so it's better to only alter it if possible, instead of performing a full re-render.</p>
+
+<h3>onPageBeforeCreate <code>object.onPageBeforeCreate()</code>
+</h3>
+
+<p>Called before the page is enhanced by JQuery Mobile.
+<em>Overload</em> for your own use.</p>
+
+<h3>onPageCreate <code>object.onPageCreate()</code>
+</h3>
+
+<p>Called when the page is being enhanced by JQuery Mobile.
+<em>Overload</em> for your own use.</p>
+
+<h3>onPageBeforeShow <code>object.onPageBeforeShow()</code>
+</h3>
+
+<p>Called before the page starts being transitioned to.
+<em>Overload</em> for your own use.</p>
+
+<h3>onPageShow <code>object.onPageShow()</code>
+</h3>
+
+<p>Called when the page is done being transitioned to.
+<em>Overload</em> for your own use.</p>
+
+<h3>onPageBeforeHide <code>object.onPageBeforeHide()</code>
+</h3>
+
+<p>Called before the page starts being transitioned from.
+<em>Overload</em> for your own use.</p>
+
+<h3>onPageHide <code>object.onPageHide()</code>
+</h3>
+
+<p>Called when the page is done being transitioned from.
+<em>Overload</em> for your own use.</p>
+
+<h3>events <code>object.events</code>
+</h3>
+
+<pre><code>events: {
+    'vclick': 'defaultEvent'
+}
+</code></pre>
+
+<p>By default, views use a delegated event to check for clicks on elements that define a "route" attribute. <strong>defaultEvent()</strong> will open the page pointed by the route.</p>
+
+<h3>defaultEvent <code>object.defaultEvent(ev)</code>
+</h3>
+
+<p>This is the default event handler.</p>
+
+<h3>ignoreEvent <code>object.ignoreEvent(ev)</code>
+</h3>
+
+<p>Provided for conveniance to views willing to ignore certain events.</p>
+
+<h2>Jackbone.Header and Jackbone.Footer</h2>
+
+<p>Like <code>Jackbone.View</code>, but aimed to be used as page headers and footers.</p>
+
+<h2>Jackbone.Listview</h2>
+
+<p>The JQueryMobile Listview Helper</p>
+
+<p>Helps doing a clean refresh of a listview.</p>
+
+<p>Uses a <strong>ListviewUpdater</strong> object:</p>
+
+<pre><code>ListviewUpdater: {
+    setLi: function ($li, model);
+    newLi: function (model);
+}
+</code></pre>
+
+<ul>
+<li>
+<strong>setLi</strong> will adjust the content of jQuery li element according to the given JSON model.</li>
+<li>
+<strong>newLi</strong> will create a new li element from given JSON model.</li>
+</ul><h3>updateJSON <code>Listview.updateJSON($ul, collection, updater)</code>
+</h3>
+
+<p>Parameters:</p>
+
+<ul>
+<li>
+<strong>$ul</strong>: a jQuery ul element</li>
+<li>
+<strong>collection</strong>: JSON collection</li>
+<li>
+<strong>updater</strong>: a <code>ListviewUpdater</code> (see above)</li>
+</ul><h3>update <code>Listview.update($ul, collection, updater)</code>
+</h3>
+
+<p>Parameters:</p>
+
+<ul>
+<li>
+<strong>$ul</strong>: a jQuery ul element</li>
+<li>
+<strong>collection</strong>: Backbone collection</li>
+<li>
+<strong>updater</strong>: a ListviewUpdater (see above)</li>
+</ul><h2>Theming Options</h2>
+
+<h3>Jackbone.DefaultHeader</h3>
+
+<p>Screens may include a default header, which will be instanciated using the <strong>Jackbone.DefaultHeader</strong> View (a class extending <strong>Jackbone.Header</strong>).</p>
+
+<p>It can be disabled globally by setting this to null or per screen by passing the <strong>noHeader</strong> option to <strong>Router</strong>'s <strong>openView()</strong> call.</p>
+
+<h3>Jackbone.DefaultFooter</h3>
+
+<p>Screens may include a default footer too, instanciated using the <strong>Jackbone.DefaultFooter</strong> View (a class extending <strong>Jackbone.Footer</strong>).</p>
+
+<p>It can be disabled globally by setting this to null or per screen by passing the <strong>noFooter</strong> option to <strong>Router</strong>'s <strong>openView()</strong> call.</p>
+
+<h2>Jackbone.Controller</h2>
+
+<p>For complex views that could be reused in different contexts it's better to create one (or many) controller.  Views will only handle input/output, whereas controllers will handle logic and interactions with models.</p>
+
+<p>Backbone doesn't provide a "Controller" interface, but Jackbone defines one. It's more than an interface, it's a also set of conventions that controllers have to follow.</p>
+
+<p>Here is what Controllers do:</p>
+
+<ul>
+<li>Load models and collections.</li>
+<li>Create the view, send it the appropriate 'options'.</li>
+<li>Provide "intelligence" to the view as a set of callbacks.</li>
+</ul><h3>Interaction with the view</h3>
+
+<p>Controller should fill this.options in the initialize method.</p>
+
+<p>In options, we add models and callbacks that the view will have to call. A very common callback is onRefresh(). onRefresh will be called by the view to refresh the models and collections, before it refreshes the interface.</p>
+
+<h3>Other things to know</h3>
+
+<p>A Controller will be kept in cache by the ViewManager, for a few minutes after its View was hidden.</p>
+
+<p>Later on, controller's <strong>destroy()</strong> will be called by the garbage collector. This is where the Controller has to destroy structure it may have created.</p>
+
+<p>A nice way for a controller to monitor his view is by providing callbacks in the options.</p>
+
+<h3>Interaction with the view manager</h3>
+
+<p>The View Manager will instanciate controllers.</p>
+
+<p>It will then look for this.view, an instanciated Jackbone.View</p>
+
+<h3>initialize <code>object.initialize(options)</code>
+</h3>
+
+<p>Initialize the controller.  <strong>this.view</strong> has to be instanciated here.</p>
+
+<h3>destroy <code>object.destroy()</code>
+</h3>
+
+<p>Destroy the controller, its views and models.</p>
+
+<p>Only useful when some heavy resource have to be freed.</p>
+
+<h3>bindEvents <code>object.bindEvents()</code>
+</h3>
+
+<p>Called whenever events binding is required.
+<strong>Overload</strong> to bind your own callbacks to events.</p>
+
+<h3>unbindEvents <code>object.unbindEvents()</code>
+</h3>
+
+<p>Called whenever cleaning of events binding is required.
+<strong>Overload</strong> to unbind your own callbacks to events.</p>
+
+<h2>Jackbone.Router</h2>
+
+<p>Jackbone Router provide a clean way to navigate through pages by disabling JQueryMobile's own navigation engine and relying only on JQueryMobile's lower-level changePage method.</p>
+
+<p>Use <strong>goto</strong> method or set the <strong>route</strong> attribute to your HTML elements in order to navigate from view to view.</p>
+
+<p>Override <strong>routes</strong> and call <strong>openView</strong> and <strong>openDialog</strong> in your own application's Router.</p>
+
+<h3>goto <code>object.goto(page, args)</code>
+</h3>
+
+<p>Navigate to a new page.</p>
+
+<h3>getPageName <code>object.getPageName(page, args)</code>
+</h3>
+
+<p>Name of the page as referenced by the page-name attribute in the DOM.</p>
+
+<h3>getPageHash <code>object.getPageHash(page, args)</code>
+</h3>
+
+<p>Name of the page as referenced on the hash tag.</p>
+
+<h3>openView <code>object.openView(viewName, View, options, extra)</code>
+</h3>
+
+<p>Create the view if not already cached, then open it.</p>
+
+<p><strong>viewName + options</strong> will identify the view in the cache, thus should be unique for each view.</p>
+
+<p><strong>extra</strong> are additional options, to heavy to be used as a key in the cache.</p>
+
+<p><strong>View</strong> has to be a <strong>Jackbone.View</strong> constructor.</p>
+
+<h3>openDialog <code>object.openDialog(viewName, View, options, extra)</code>
+</h3>
+
+<p>Same as <strong>openView</strong>, but open the view as a dialog.</p>
+
+<h3>openViewController <code>object.openViewController(ctrlName, Controller, options, extra, role)</code>
+</h3>
+
+<p>Create view with a controller if not already cached, then open it. Behaviour is identical to <strong>openView</strong> except that <strong>Controller</strong> should be a <strong>Jackbone.Controller</strong> constructor instead of a <strong>Jackbone.View</strong>.</p>
+
+<h3>openDialogController <code>object.openDialogController(ctrlName, Controller, options, extra, role)</code>
+</h3>
+
+<p>Same as <strong>openViewController</strong>, but open the view as a dialog.</p>
+
+<h2>Jackbone.History</h2>
+
+<p>Like <strong>Backbone.History</strong>.</p>
+      </section>
+    </div>
+    <footer>
+      <p>Project maintained by <a href="https://github.com/Fovea">Fovea</a></p>
+      <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
+    </footer>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+    
+  </body>
+</html>
