@@ -551,6 +551,8 @@
 
         // Garbage collector, removes unused views and controllers.
         _clearControllers: function () {
+
+            var that = this;
             var now = +new Date();
             var toRemove = _(this.controllers).filter(function (c) {
                 var age = (now - c.lastView);
@@ -558,8 +560,8 @@
             });
 
             _(toRemove).each(function (c) {
-                if (c.controller !== this.currentController) {
-                    delete this.controllers[c.pageUID];
+                if (c.controller !== that.currentController) {
+                    delete that.controllers[c.pageUID];
                     c.controller.destroy();
                     if (c.controller._rootView) {
                         c.controller._rootView.clean();
@@ -620,6 +622,7 @@
             }
             // No controller is active, this is a Controller-less View.
             this.setCurrentController(null);
+            view._pageUID = pageUID;
             return view;
         },
 
@@ -680,6 +683,7 @@
             this.controllers[pageUID].lastView = +new Date();
 
             // Events.trigger('change:pagecid', ctrl.componentCID, ctrl.reportCID);
+            ctrl._rootView._pageUID = pageUID;
             return ctrl._rootView;
         }
     };
@@ -758,7 +762,7 @@
                 extra.backhash = this.currentHash;
             }
             var v = ViewManager.createWithView(viewName, View, options, extra);
-            this.changePage(viewName, v, role);
+            this.changePage(v._pageUID.replace(/\W/g, '-'), v, role);
             return v;
         },
 
@@ -777,7 +781,7 @@
                 extra.backhash = this.currentHash;
             }
             var v = ViewManager.createWithController(ctrlName, Controller, options, extra);
-            this.changePage(ctrlName, v, role);
+            this.changePage(v._pageUID.replace(/\W/g, '-'), v, role);
             return v;
         },
 
