@@ -1,4 +1,4 @@
-//     Jackbone.js 0.1.6
+//     Jackbone.js 0.1.7
 
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Jackbone may be freely distributed under the MIT license.
@@ -24,7 +24,7 @@
     }
 
     // Current version of the library. Keep in sync with `package.json`.
-    Jackbone.VERSION = '0.1.6';
+    Jackbone.VERSION = '0.1.7';
 
     // Require Backbone
     var Backbone = root.Backbone;
@@ -602,7 +602,7 @@
         createWithView: function (name, View, options, extra_options) {
             var view;
             // pageUID is a unique ID to identify an instance of a View.
-            var pageUID = name + JSON.stringify(options);
+            var pageUID = name + JSON.stringify(options).replace(/["{}]/g, "");
             // Add extra_options to options
             if (extra_options) {
                 options = _.extend(options, extra_options);
@@ -665,7 +665,7 @@
                 this._clearControllers();
             }
 
-            var pageUID = name + JSON.stringify(options);
+            var pageUID = name + JSON.stringify(options).replace(/["{}]/g, "");
 
             // Add extra_options to options
             if (extra_options) {
