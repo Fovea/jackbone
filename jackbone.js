@@ -1,4 +1,4 @@
-//     Jackbone.js 0.1.5
+//     Jackbone.js 0.1.6
 
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Jackbone may be freely distributed under the MIT license.
@@ -24,7 +24,7 @@
     }
 
     // Current version of the library. Keep in sync with `package.json`.
-    Jackbone.VERSION = '0.1.5';
+    Jackbone.VERSION = '0.1.6';
 
     // Require Backbone
     var Backbone = root.Backbone;
@@ -62,18 +62,24 @@
         this.back = { title: 'Back', hash: '' };
 
         Backbone.View.apply(this, arguments);
-        this.setOptions(options);
+
+        if (options) {
+            this.setOptions(options);
+        }
     };
     View.extend = Backbone.View.extend;
 
     _.extend(View.prototype, Backbone.View.prototype, {
+
         // Change options for this view and its subviews.
         setOptions: function (options) {
             this.options = options;
+
             // options.back can be used to change view 'Back' link.
             if (options.back) {
                 this.back = options.back;
             }
+
             this.callSubviews('setOptions', options);
             this.applyOptions(options);
         },
@@ -108,7 +114,7 @@
 
         // Called whenever options have been changed.
         // Overload to run your own custom code.
-        applyOptions: function () {},
+        applyOptions: function (/* options */) {},
 
         // Called whenever events binding is required.
         // Overload to bind your own callbacks to events.
@@ -500,6 +506,14 @@
             this.view = null;
         },
 
+        setOptions: function (options) {
+            this.applyOptions(options);
+            if (this._rootView) this._rootView.setOptions(options);
+        },
+
+        // Apply any changes made to the controller's options.
+        applyOptions: function (/* options */) {},
+
         // Destroy the controller, its views and models.
         destroy: function () {},
 
@@ -604,22 +618,24 @@
             if (typeof this.views[pageUID] !== 'undefined') {
                 // Retrieve it.
                 view = this.views[pageUID];
-                // Change its options and refresh.
-                view.setOptions(options);
             } else {
                 // Should we create a Header and/or Footer?
                 var noHeader = (options && options.noHeader) || (!Jackbone.DefaultHeader);
                 var noFooter = (options && options.noFooter) || (!Jackbone.DefaultFooter);
                 // Create the main content view.
-                var content = new View(options);
+                var content = new View(/* options */);
                 // Add headers and footer if required.
-                var header  = noHeader ? null : new Jackbone.DefaultHeader(options);
-                var footer  = noFooter ? null : new Jackbone.DefaultFooter(options);
+                var header  = noHeader ? null : new Jackbone.DefaultHeader(/* options */);
+                var footer  = noFooter ? null : new Jackbone.DefaultFooter(/* options */);
                 // Build the root view.
                 view = new JQMView(header, content, footer);
                 // Store it in the cache for later retrieval.
                 this.views[pageUID] = view;
             }
+
+            // Change its options and refresh.
+            view.setOptions(options);
+
             // No controller is active, this is a Controller-less View.
             this.setCurrentController(null);
             view._pageUID = pageUID;
@@ -641,19 +657,21 @@
         // - options.noHeader: disable the header for this view.
         // - options.noFooter: disable the footer for this view.
         createWithController: function (name, Controller, options, extra_options) {
+
             // Run Controller Garbage Collector
             this.runGC += 1;
             if (this.runGC > 5) {
                 this.runGC = 0;
                 this._clearControllers();
             }
-            // Create Controller if not exists.
-            var ctrl = null;
+
             var pageUID = name + JSON.stringify(options);
+
             // Add extra_options to options
             if (extra_options) {
                 options = _.extend(options, extra_options);
             }
+
             // Adjust the backhash option
             if (options && options.backhash) {
                 options.back = {
@@ -661,6 +679,9 @@
                     hash:  options.backhash
                 };
             }
+
+            // Create Controller if not exists.
+            var ctrl = null;
             if (typeof this.controllers[pageUID] !== 'undefined') {
                 ctrl = this.controllers[pageUID].controller;
             } else {
@@ -671,8 +692,8 @@
                 ctrl = new Controller(options);
                 // Logger.log('Create Controller: ' + pageUID);
                 var content = ctrl.view;
-                var header  = noHeader ? null : new Jackbone.DefaultHeader(options);
-                var footer  = noFooter ? null : new Jackbone.DefaultFooter(options);
+                var header  = noHeader ? null : new Jackbone.DefaultHeader(/* options */);
+                var footer  = noFooter ? null : new Jackbone.DefaultFooter(/* options */);
                 var view    = new JQMView(header, content, footer);
                 // Cache the controller
                 this.controllers[pageUID] = { pageUID: pageUID, controller: ctrl };
@@ -681,6 +702,9 @@
             // Return root view (a JQMView)
             this.setCurrentController(ctrl);
             this.controllers[pageUID].lastView = +new Date();
+
+            // Update options
+            ctrl._rootView.setOptions(ctrl.options);
 
             // Events.trigger('change:pagecid', ctrl.componentCID, ctrl.reportCID);
             ctrl._rootView._pageUID = pageUID;
