@@ -1,4 +1,4 @@
-//     Jackbone.js 0.1.7
+//     Jackbone.js 0.1.8
 
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Jackbone may be freely distributed under the MIT license.
@@ -24,7 +24,7 @@
     }
 
     // Current version of the library. Keep in sync with `package.json`.
-    Jackbone.VERSION = '0.1.7';
+    Jackbone.VERSION = '0.1.8';
 
     // Require Backbone
     var Backbone = root.Backbone;
@@ -45,6 +45,54 @@
 
     // Jackbone is an extension of Backbone
     _.extend(Jackbone, Backbone);
+
+    // Jackbone.profiler
+    // -----------------
+    //
+    // Allows you to profile time to perform certain actions
+    // Used by the Router to profile view creation times.
+    //
+    // Set Jackbone.profile.enabled = true to activate.
+    Jackbone.profiler = {
+
+        // Set to true to enable profiling your views.
+        enabled: false,
+
+        // Dictionary of statistics.
+        stats: {},
+
+        // Called at the beggining of an operation
+        onStart: function () {
+            if (this.enabled) {
+                this._startDate = +new Date();
+            }
+        },
+
+        // Called when an operation is done.
+        //
+        // Will update Jackbone.profiler.stats and show average duration on the console.
+        onEnd: function (timerId) {
+            if (this.enabled) {
+                var duration = +new Date() - this._startDate;
+                if (typeof this.stats[timerId] !== 'undefined') {
+                    var stats = this.stats[timerId];
+                    stats.calls += 1;
+                    stats.totalMs += duration;
+                    if (duration > stats.maxMs) {
+                        stats.maxMs = duration;
+                    }
+                }
+                else {
+                    this.stats[timerId] = {
+                        calls: 1,
+                        totalMs: duration,
+                        maxMs: duration
+                    };
+                }
+                console.log('time(' + timerId + ') = ' + duration + 'ms');
+            }
+        }
+    };
 
     // Jackbone.View
     // -------------
@@ -387,7 +435,7 @@
         // ul: a jQuery ul element
         // collection: JSON collection
         // updater, a ListviewUpdater (see above)
-        updateJSON: function (ul, collection, updater) {
+        updateJSON: function (ul, collection, updater, refresh) {
             var i = 0;
             var li = ul.find('li');
 
@@ -406,20 +454,22 @@
                 $(li[i]).remove();
                 ++i;
             }
-            ul.listview('refresh');
+            if (refresh !== 'false') {
+                ul.listview('refresh');
+            }
         },
 
         // Parameters
         // ul: a jQuery ul element
         // collection: Backbone collection
         // updater, a ListviewUpdater (see above)
-        update: function (ul, collection, updater) {
+        update: function (ul, collection, updater, refresh) {
             var json = _(collection.models).map(function (m) {
                 var ret = _.clone(m.attributes);
                 _.extend(ret, { id: m.id, cid: m.cid });
                 return ret;
             });
-            this.updateJSON(ul, json, updater);
+            this.updateJSON(ul, json, updater, refresh);
         }
     };
 
@@ -777,7 +827,11 @@
         },
 
         // Create and open view if not already cached.
-        openView: function (viewName, View, options, extra, role) {
+        _openWithViewManager: function (method, name, Class, options, extra, role) {
+
+            // Start profiling view opening.
+            Jackbone.profiler.onStart();
+
             if (!extra) {
                 extra = {};
             }
@@ -785,9 +839,18 @@
             if (!extra.backhash) {
                 extra.backhash = this.currentHash;
             }
-            var v = ViewManager.createWithView(viewName, View, options, extra);
+            var v = ViewManager[method](name, Class, options, extra);
             this.changePage(v._pageUID.replace(/\W/g, '-'), v, role);
+
+            // Done profiling.
+            Jackbone.profiler.onEnd(v._pageUID);
+
             return v;
+        },
+
+        // Create and open view if not already cached.
+        openView: function (viewName, View, options, extra, role) {
+            return this._openWithViewManager('createWithView', viewName, View, options, extra, role);
         },
 
         // Create and open dialog if not already cached.
@@ -797,16 +860,7 @@
 
         // Create and open view with a controller if not already cached.
         openViewController: function (ctrlName, Controller, options, extra, role) {
-            if (!extra) {
-                extra = {};
-            }
-            // By default 'Back" will return to previous page.
-            if (!extra.backhash) {
-                extra.backhash = this.currentHash;
-            }
-            var v = ViewManager.createWithController(ctrlName, Controller, options, extra);
-            this.changePage(v._pageUID.replace(/\W/g, '-'), v, role);
-            return v;
+            return this._openWithViewManager('createWithController', ctrlName, Controller, options, extra, role);
         },
 
         // Create and open dialog with a controller if not already cached.
