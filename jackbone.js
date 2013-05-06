@@ -1,4 +1,4 @@
-//     Jackbone.js 0.1.8
+//     Jackbone.js 0.1.9
 
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Jackbone may be freely distributed under the MIT license.
@@ -24,7 +24,7 @@
     }
 
     // Current version of the library. Keep in sync with `package.json`.
-    Jackbone.VERSION = '0.1.8';
+    Jackbone.VERSION = '0.1.9';
 
     // Require Backbone
     var Backbone = root.Backbone;
