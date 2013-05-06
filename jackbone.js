@@ -70,10 +70,13 @@
 
         // Called when an operation is done.
         //
-        // Will update Jackbone.profiler.stats and show average duration on the console.
+        // Will update Jackbone.profiler.stats and show average duration on the
+        // console.
         onEnd: function (timerId) {
             if (this.enabled) {
                 var duration = +new Date() - this._startDate;
+
+                // Already have stats for this method? Update them.
                 if (typeof this.stats[timerId] !== 'undefined') {
                     var stats = this.stats[timerId];
                     stats.calls += 1;
@@ -83,12 +86,15 @@
                     }
                 }
                 else {
+                    // It's the first time we profile this method, create the
+                    // initial stats.
                     this.stats[timerId] = {
                         calls: 1,
                         totalMs: duration,
                         maxMs: duration
                     };
                 }
+
                 console.log('time(' + timerId + ') = ' + duration + 'ms');
             }
         }
@@ -282,21 +288,21 @@
         // setup relations between header, footer and content.
         this.subviews = [];
         if (header) {
-            // Header may now use direct links to its root view, content and footer.
+            // link header to its root view, content and footer.
             header.content = content;
             header.footer  = footer;
             header.root    = this;
             this.subviews.push(header);
         }
         if (footer) {
-            // Footer may now use direct links to its root view, content and header.
+            // link footer to its root view, content and header.
             footer.content = content;
             footer.header  = header;
             footer.root    = this;
             this.subviews.push(footer);
         }
         if (content) {
-            // Content view may now use direct links to its root view, header and footer.
+            // link content view to its root view, header and footer.
             content.header  = header;
             content.footer  = footer;
             content.root    = this;
@@ -315,40 +321,61 @@
 
         /** Default render. Sets header, content and footer. */
         render: function () {
-            if (this.needRedraw) { // Controllers are responsible of setting needRedraw.
-                var $page = $('<div data-role="page" style="display:block"></div>');
 
+            // Note: Controllers are responsible of setting needRedraw.
+            if (this.needRedraw) {
+
+                // Create root element for the page
+                var page = document.createElement('div');
+                page.style.display = 'block';
+                page.setAttribute('data-role', 'page');
+
+                // Create, render and add the header
                 if (this.header) {
-                    var $header = $('<div data-role="header"></div>');
-                    this.header.setElement($header);
-                    // this.header.setTitle(this.content.title || '');
-                    // this.header.setSubtitle(this.content.subtitle || '');
-                    // this.header.setBack(this.content.back || {});
+                    var header = document.createElement('div');
+                    header.setAttribute('data-role', 'header');
+                    this.header.setElement(header);
                     this.header.render();
-                    $page.append($header);
+                    page.appendChild(header);
                 }
 
-                var $content = $('<div class="content" data-role="content"></div>');
-                this.content.setElement($content);
+                // Create the content element
+                var content = document.createElement('div');
+                content.setAttribute('data-role', 'content');
+                content.className = 'content';
+
+                // Render the content
+                this.content.setElement(content);
                 this.content.render();
+
+                // Make sure content fills the screen to the top/bottom
+                // when no header/footer are provided.
                 if (!this.header) {
-                    $content.css('top', '0');
+                    content.style.top = '0';
                 }
                 if (!this.footer) {
-                    $content.css('bottom', '0');
+                    content.style.bottom = '0';
                 }
-                $page.append($content);
 
+                page.appendChild(content);
+
+                // Create, render and add the footer
                 if (this.footer) {
-                    var $footer = $('<div data-role="footer"></div>');
-                    this.footer.setElement($footer);
+                    var footer = document.createElement('div');
+                    footer.setAttribute('data-role', 'footer');
+                    this.footer.setElement(footer);
                     this.footer.render();
-                    $page.append($footer);
+                    page.appendChild(footer);
                 }
 
-                this.$el.html('');
-                this.$el.append($page);
-
+                // Add the page into the DOM.
+                if (this.el.firstChild) {
+                    this.el.replaceChild(page, this.el.firstChild);
+                }
+                else {
+                    this.el.appendChild(page);
+                }
+ 
                 this.needRedraw = false;
             }
         },
@@ -363,11 +390,8 @@
 
             'pagebeforecreate': '_onPageBeforeCreate', // before create
             'pagecreate':       '_onPageCreate'        // before jqm enhancement
-
-            //'swiperight': 'triggerGoBack',
-            //'swipeleft':  'triggerGoNext',
-            // 'click':  'ignoreEvent' // Force vclick to be used, all click to be ignored.
         },
+
         // JQuery Mobile Hack
         _onPageBeforeHide: function () {
             this.callSubviews('onPageBeforeHide');
@@ -379,8 +403,6 @@
         },
         _onPageBeforeShow: function () {
             this.callSubviews('onPageBeforeShow');
-            // if (this.footer) this.footer.refresh();
-            // if (this.header) this.header.refresh();
             this.enable(); // Make sure the page isn't disabled.
         },
         _onPageShow: function () {
@@ -431,6 +453,7 @@
     //     according to the given JSON model.
     // newLi will create a new li element from given JSON model.
     Jackbone.Listview = {
+        
         // Parameters
         // ul: a jQuery ul element
         // collection: JSON collection
@@ -578,9 +601,9 @@
         },
 
         // Performs the initial configuration of a View with a set of options.
-        // Keys with special meaning *(e.g. model, collection, id, className)* are
-        // attached directly to the view.  See `viewOptions` for an exhaustive
-        // list.
+        // Keys with special meaning *(e.g. model, collection, id, className)*
+        // are attached directly to the view.  See `viewOptions` for an
+        // exhaustive list.
         _configure: function (options) {
             if (this.options) {
                 options = _.extend({}, _.result(this, 'options'), options);
@@ -651,12 +674,15 @@
         // - options.noFooter: disable the footer for this view.
         createWithView: function (name, View, options, extra_options) {
             var view;
+
             // pageUID is a unique ID to identify an instance of a View.
             var pageUID = name + JSON.stringify(options).replace(/["{}]/g, "");
+
             // Add extra_options to options
             if (extra_options) {
                 options = _.extend(options, extra_options);
             }
+
             // Adjust the backhash option
             if (options && options.backhash) {
                 options.back = {
@@ -664,21 +690,31 @@
                     hash:  options.backhash
                 };
             }
+
             // This view already exists.
             if (typeof this.views[pageUID] !== 'undefined') {
+
                 // Retrieve it.
                 view = this.views[pageUID];
+
             } else {
+
                 // Should we create a Header and/or Footer?
-                var noHeader = (options && options.noHeader) || (!Jackbone.DefaultHeader);
-                var noFooter = (options && options.noFooter) || (!Jackbone.DefaultFooter);
+                var noHeader = (options && options.noHeader) ||
+                    (!Jackbone.DefaultHeader);
+                var noFooter = (options && options.noFooter) ||
+                    (!Jackbone.DefaultFooter);
+
                 // Create the main content view.
-                var content = new View(/* options */);
+                var content = new View();
+
                 // Add headers and footer if required.
-                var header  = noHeader ? null : new Jackbone.DefaultHeader(/* options */);
-                var footer  = noFooter ? null : new Jackbone.DefaultFooter(/* options */);
+                var header  = noHeader ? null : new Jackbone.DefaultHeader();
+                var footer  = noFooter ? null : new Jackbone.DefaultFooter();
+
                 // Build the root view.
                 view = new JQMView(header, content, footer);
+
                 // Store it in the cache for later retrieval.
                 this.views[pageUID] = view;
             }
@@ -734,21 +770,26 @@
             var ctrl = null;
             if (typeof this.controllers[pageUID] !== 'undefined') {
                 ctrl = this.controllers[pageUID].controller;
+
             } else {
                 // Should we create a Header and/or Footer?
-                var noHeader = (options && options.noHeader) || (!Jackbone.DefaultHeader);
-                var noFooter = (options && options.noFooter) || (!Jackbone.DefaultFooter);
+                var noHeader = (options && options.noHeader) ||
+                    (!Jackbone.DefaultHeader);
+                var noFooter = (options && options.noFooter) ||
+                    (!Jackbone.DefaultFooter);
+
                 // Initialize the controller
                 ctrl = new Controller(options);
-                // Logger.log('Create Controller: ' + pageUID);
                 var content = ctrl.view;
-                var header  = noHeader ? null : new Jackbone.DefaultHeader(/* options */);
-                var footer  = noFooter ? null : new Jackbone.DefaultFooter(/* options */);
+                var header  = noHeader ? null : new Jackbone.DefaultHeader();
+                var footer  = noFooter ? null : new Jackbone.DefaultFooter();
                 var view    = new JQMView(header, content, footer);
+
                 // Cache the controller
                 this.controllers[pageUID] = { pageUID: pageUID, controller: ctrl };
                 ctrl._rootView = view;
             }
+
             // Return root view (a JQMView)
             this.setCurrentController(ctrl);
             this.controllers[pageUID].lastView = +new Date();
@@ -776,9 +817,11 @@
     // application's Router.
     var Router = Jackbone.Router = function (/*options*/) {
         Backbone.Router.apply(this, arguments);
+
         // First created router is the default router.
         if (!Jackbone.router) {
             Jackbone.router = this;
+
             // It's also a good time to configure JQuery Mobile,
             // creating the first router will happen/ before the
             // first view is opened (obviously, because it is a
@@ -793,6 +836,7 @@
     // Does it by joining page and arguments using the given
     // separator.
     var makePageName = function (separator, page, args) {
+
         // By default, we return page name without arguments.
         var ret = page;
         if (typeof args !== 'undefined') {
@@ -827,20 +871,20 @@
         },
 
         // Create and open view if not already cached.
-        _openWithViewManager: function (method, name, Class, options, extra, role) {
+        _openWithViewManager: function (args) {
+            // method, name, Class, options, extra, role) {
 
             // Start profiling view opening.
             Jackbone.profiler.onStart();
 
-            if (!extra) {
-                extra = {};
-            }
+            var extra = args.extra || {};
+
             // By default 'Back" will return to previous page.
             if (!extra.backhash) {
                 extra.backhash = this.currentHash;
             }
-            var v = ViewManager[method](name, Class, options, extra);
-            this.changePage(v._pageUID.replace(/\W/g, '-'), v, role);
+            var v = ViewManager[args.method](args.name, args.Class, args.options, args.extra);
+            this.changePage(v._pageUID.replace(/\W/g, '-'), v, args.role);
 
             // Done profiling.
             Jackbone.profiler.onEnd(v._pageUID);
@@ -850,7 +894,13 @@
 
         // Create and open view if not already cached.
         openView: function (viewName, View, options, extra, role) {
-            return this._openWithViewManager('createWithView', viewName, View, options, extra, role);
+            return this._openWithViewManager({
+                method: 'createWithView',
+                name: viewName,
+                Class: View,
+                options: options,
+                extra: extra,
+                role: role});
         },
 
         // Create and open dialog if not already cached.
@@ -860,7 +910,13 @@
 
         // Create and open view with a controller if not already cached.
         openViewController: function (ctrlName, Controller, options, extra, role) {
-            return this._openWithViewManager('createWithController', ctrlName, Controller, options, extra, role);
+            return this._openWithViewManager({
+                method: 'createWithController',
+                name: ctrlName,
+                Class: Controller,
+                options: options,
+                extra: extra,
+                rotl: role});
         },
 
         // Create and open dialog with a controller if not already cached.
@@ -872,22 +928,28 @@
         changePage: function (pageName, page, role) {
             // Extends Views
             // Create JQuery Mobile Page
-            var isExistingPage = $('div[page-name=' + pageName.toLowerCase() + ']');
+            var pageid = 'pagename-' + pageName.toLowerCase();
+            var isExistingPage = $('#' + pageid);
+
             // Select the transition to apply.
             var t = this.selectTransition(pageName, role);
-            // For already existing pages, only delegate events so they can handle
-            // onPageBeforeShow and onPageShow.
+
+            // For already existing pages, only delegate events so they can
+            // handle onPageBeforeShow and onPageShow.
             if (isExistingPage.length === 1) {
                 page.delegateEvents();
                 page.refresh();
+
             } else {
                 // Create the page, store its page name in an attribute
                 // so it can be retrieved later.
-                page.$el.attr('page-name', pageName.toLowerCase());
-                page.$el.addClass('page-container');
+                page.el.id = 'pagename-' + pageName.toLowerCase();
+                page.el.className = 'page-container';
+
                 // Render it and add it in the DOM.
                 page.render();
-                $('body').append(page.$el);
+                document.body.appendChild(page.el);
+                // $('body').append(page.$el);
             }
             // Perform transition using JQuery Mobile
             $.mobile.changePage(page.$el, {
@@ -909,8 +971,8 @@
         transitions: {},
 
         // Return parameters of the transition to use to switch to pageName
-        // It's context dependant, meaning this method remembers the currently viewed
-        // view and determine the transition accordingly.
+        // It's context dependant, meaning this method remembers the currently
+        // viewed view and determine the transition accordingly.
         selectTransition: function (pageName, role) {
             var lastPageName     = this.currentPageName || '';
             var lastPageRole     = this.currentPageRole || '';
