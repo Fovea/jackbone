@@ -1,4 +1,4 @@
-//     Jackbone.js 0.1.9
+//     Jackbone.js 0.2.0
 
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Jackbone may be freely distributed under the MIT license.
@@ -24,7 +24,7 @@
     }
 
     // Current version of the library. Keep in sync with `package.json`.
-    Jackbone.VERSION = '0.1.9';
+    Jackbone.VERSION = '0.2.0';
 
     // Require Backbone
     var Backbone = root.Backbone;
@@ -672,7 +672,11 @@
         // - options.backhash: force the page to go back to.
         // - options.noHeader: disable the header for this view.
         // - options.noFooter: disable the footer for this view.
-        createWithView: function (name, View, options, extra_options) {
+        createWithView: function (args) {
+            var name = args.name;
+            var View = args.Class;
+            var options = args.options;
+            var extra_options = args.extra;
             var view;
 
             // pageUID is a unique ID to identify an instance of a View.
@@ -742,7 +746,13 @@
         // - options.backhash: force the page to go back to.
         // - options.noHeader: disable the header for this view.
         // - options.noFooter: disable the footer for this view.
-        createWithController: function (name, Controller, options, extra_options) {
+        createWithController: function (args) {
+
+            // Retrieve arguments
+            var name = args.name;
+            var Controller = args.Class;
+            var options = args.options;
+            var extra_options = args.extra;
 
             // Run Controller Garbage Collector
             this.runGC += 1;
@@ -872,18 +882,19 @@
 
         // Create and open view if not already cached.
         _openWithViewManager: function (args) {
-            // method, name, Class, options, extra, role) {
 
             // Start profiling view opening.
             Jackbone.profiler.onStart();
 
-            var extra = args.extra || {};
+            if (!args.extra) {
+                args.extra = {};
+            }
 
             // By default 'Back" will return to previous page.
-            if (!extra.backhash) {
-                extra.backhash = this.currentHash;
+            if (!args.extra.backhash) {
+                args.extra.backhash = this.currentHash;
             }
-            var v = ViewManager[args.method](args.name, args.Class, args.options, args.extra);
+            var v = ViewManager[args.method](args);
             this.changePage(v._pageUID.replace(/\W/g, '-'), v, args.role);
 
             // Done profiling.
@@ -931,9 +942,6 @@
             var pageid = 'pagename-' + pageName.toLowerCase();
             var isExistingPage = $('#' + pageid);
 
-            // Select the transition to apply.
-            var t = this.selectTransition(pageName, role);
-
             // For already existing pages, only delegate events so they can
             // handle onPageBeforeShow and onPageShow.
             if (isExistingPage.length === 1) {
@@ -949,8 +957,11 @@
                 // Render it and add it in the DOM.
                 page.render();
                 document.body.appendChild(page.el);
-                // $('body').append(page.$el);
             }
+
+            // Select the transition to apply.
+            var t = this.selectTransition(pageName, role);
+
             // Perform transition using JQuery Mobile
             $.mobile.changePage(page.$el, {
                 changeHash:    false,
@@ -959,6 +970,7 @@
                 role:          role,
                 pageContainer: page.$el
             });
+
             // Current hash is stored so a subsequent openView can know
             // which page it comes from.
             this.currentHash = Jackbone.history.getFragment();
