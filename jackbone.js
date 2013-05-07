@@ -62,9 +62,9 @@
         stats: {},
 
         // Called at the beggining of an operation
-        onStart: function () {
+        onStart: function (t) {
             if (this.enabled) {
-                this._startDate = +new Date();
+                this._startDate = t || (+new Date());
             }
         },
 
@@ -72,9 +72,9 @@
         //
         // Will update Jackbone.profiler.stats and show average duration on the
         // console.
-        onEnd: function (timerId) {
+        onEnd: function (timerId, t) {
             if (this.enabled) {
-                var duration = +new Date() - this._startDate;
+                var duration = (t || (+new Date())) - this._startDate;
 
                 // Already have stats for this method? Update them.
                 if (typeof this.stats[timerId] !== 'undefined') {
@@ -477,7 +477,7 @@
                 $(li[i]).remove();
                 ++i;
             }
-            if (refresh !== 'false') {
+            if (refresh !== false) {
                 ul.listview('refresh');
             }
         },
@@ -569,6 +569,12 @@
         // Refresh Models and Collections, call "callback" when done.
         refresh: function (callback) {
             callback();
+        },
+
+        // Perform the refresh when view is gonna be open for the
+        // first time. By default, call `this.refresh()`
+        firstRefresh: function (callback) {
+            this.refresh(callback);
         },
 
         // Initialize the controller.
@@ -672,10 +678,10 @@
         // - options.backhash: force the page to go back to.
         // - options.noHeader: disable the header for this view.
         // - options.noFooter: disable the footer for this view.
-        createWithView: function (args) {
+        createWithView: function (args, callback) {
             var name = args.name;
             var View = args.Class;
-            var options = args.options;
+            var options = args.options || {};
             var extra_options = args.extra;
             var view;
 
@@ -729,7 +735,9 @@
             // No controller is active, this is a Controller-less View.
             this.setCurrentController(null);
             view._pageUID = pageUID;
-            return view;
+
+            if (typeof callback === 'function')
+                callback(view);
         },
 
         // Loop counter used to run garbage collection
@@ -746,12 +754,13 @@
         // - options.backhash: force the page to go back to.
         // - options.noHeader: disable the header for this view.
         // - options.noFooter: disable the footer for this view.
-        createWithController: function (args) {
+        createWithController: function (args, callback) {
+            var that = this;
 
             // Retrieve arguments
             var name = args.name;
             var Controller = args.Class;
-            var options = args.options;
+            var options = args.options || {};
             var extra_options = args.extra;
 
             // Run Controller Garbage Collector
@@ -776,11 +785,33 @@
                 };
             }
 
-            // Create Controller if not exists.
+            // Called when the views and controller are done being created
             var ctrl = null;
+            var doneCreate = function () {
+                // Return root view (a JQMView)
+                that.setCurrentController(ctrl);
+                that.controllers[pageUID].lastView = +new Date();
+
+                // Update options
+                ctrl._rootView.setOptions(ctrl.options);
+
+                // Events.trigger('change:pagecid', ctrl.componentCID, ctrl.reportCID);
+                ctrl._rootView._pageUID = pageUID;
+
+                if (typeof callback === 'function') {
+                    callback(ctrl._rootView);
+                }
+            };
+
+            // Create Controller if not exists.
             if (typeof this.controllers[pageUID] !== 'undefined') {
                 ctrl = this.controllers[pageUID].controller;
-
+                if (typeof ctrl.refresh === 'function') {
+                    ctrl.refresh(doneCreate);
+                }
+                else {
+                    doneCreate();
+                }
             } else {
                 // Should we create a Header and/or Footer?
                 var noHeader = (options && options.noHeader) ||
@@ -790,26 +821,31 @@
 
                 // Initialize the controller
                 ctrl = new Controller(options);
-                var content = ctrl.view;
-                var header  = noHeader ? null : new Jackbone.DefaultHeader();
-                var footer  = noFooter ? null : new Jackbone.DefaultFooter();
-                var view    = new JQMView(header, content, footer);
 
-                // Cache the controller
-                this.controllers[pageUID] = { pageUID: pageUID, controller: ctrl };
-                ctrl._rootView = view;
+                // Create views for a controller
+                var createViews = function () {
+                    var content = ctrl.view;
+                    var header  = noHeader ? null : new Jackbone.DefaultHeader();
+                    var footer  = noFooter ? null : new Jackbone.DefaultFooter();
+                    var view    = new JQMView(header, content, footer);
+
+                    // Cache the controller
+                    that.controllers[pageUID] = { pageUID: pageUID, controller: ctrl };
+                    ctrl._rootView = view;
+
+                    doneCreate();
+                };
+
+                // Give the chance to the controller to refresh its models
+                // before we create the views.
+                if (typeof ctrl.firstRefresh === 'function') {
+                    ctrl.firstRefresh(createViews);
+                }
+                else {
+                    createViews();
+                }
             }
 
-            // Return root view (a JQMView)
-            this.setCurrentController(ctrl);
-            this.controllers[pageUID].lastView = +new Date();
-
-            // Update options
-            ctrl._rootView.setOptions(ctrl.options);
-
-            // Events.trigger('change:pagecid', ctrl.componentCID, ctrl.reportCID);
-            ctrl._rootView._pageUID = pageUID;
-            return ctrl._rootView;
         }
     };
 
@@ -880,8 +916,17 @@
             return makePageName('?', page, args);
         },
 
+        _openInProgress: false,
+
         // Create and open view if not already cached.
-        _openWithViewManager: function (args) {
+        _openWithViewManager: function (args, callback) {
+
+            var t = +new Date();
+            if (t - this._openInProgress < 100) {
+                // Probably a double click, ignore.
+                return false;
+            }
+            this._openInProgress = t;
 
             // Start profiling view opening.
             Jackbone.profiler.onStart();
@@ -894,45 +939,57 @@
             if (!args.extra.backhash) {
                 args.extra.backhash = this.currentHash;
             }
-            var v = ViewManager[args.method](args);
-            this.changePage(v._pageUID.replace(/\W/g, '-'), v, args.role);
 
-            // Done profiling.
-            Jackbone.profiler.onEnd(v._pageUID);
+            // Called when View Manager is done opening the window.
+            var that = this;
+            var done = function (v) {
+                that.changePage(v._pageUID.replace(/\W/g, '-'), v, args.role);
 
-            return v;
+                // Done profiling.
+                Jackbone.profiler.onEnd(v._pageUID);
+
+                if (typeof callback === 'function') {
+                    that._openInProgress = false;
+                    callback(v);
+                }
+            };
+
+            // Open view with the View Manager.
+            ViewManager[args.method](args, done);
         },
 
         // Create and open view if not already cached.
-        openView: function (viewName, View, options, extra, role) {
-            return this._openWithViewManager({
-                method: 'createWithView',
-                name: viewName,
-                Class: View,
-                options: options,
-                extra: extra,
-                role: role});
+        openView: function (args, callback) {
+            var a = _.extend({}, args, {
+                method: 'createWithView'
+            });
+            this._openWithViewManager(a, callback);
         },
 
         // Create and open dialog if not already cached.
-        openDialog: function (viewName, View, options, extra) {
-            return this.openView(viewName, View, options, extra, 'dialog');
+        openDialog: function (args, callback) {
+            var a = _.extend({}, args, {
+                method: 'createWithView',
+                role: 'dialog'
+            });
+            this._openWithViewManager(a, callback);
         },
 
         // Create and open view with a controller if not already cached.
-        openViewController: function (ctrlName, Controller, options, extra, role) {
-            return this._openWithViewManager({
-                method: 'createWithController',
-                name: ctrlName,
-                Class: Controller,
-                options: options,
-                extra: extra,
-                rotl: role});
+        openViewController: function (args, callback) {
+            var a = _.extend({}, args, {
+                method: 'createWithController'
+            });
+            this._openWithViewManager(a, callback);
         },
 
         // Create and open dialog with a controller if not already cached.
-        openDialogController: function (ctrlName, Controller, options, extra) {
-            this.openViewController(ctrlName, Controller, options, extra, 'dialog');
+        openDialogController: function (args, callback) {
+            var a = _.extend({}, args, {
+                method: 'createWithController',
+                role: 'dialog'
+            });
+            this._openWithViewManager(a, callback);
         },
 
         // Change to the given page.

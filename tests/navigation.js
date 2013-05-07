@@ -35,13 +35,13 @@
         '*actions': 'defaultAction'
         },
         hello: function () {
-            this.openView('Hello', HelloView, {});
+            this.openView({name: 'Hello', Class: HelloView});
         },
         world: function () {
-            this.openView('World', WorldView, {});
+            this.openView({name: 'World', Class: WorldView});
         },
         dummy: function () {
-            this.openDialog('Dummy', DummyView, {});
+            this.openDialog({name: 'Dummy', Class: DummyView});
         }
     });
 

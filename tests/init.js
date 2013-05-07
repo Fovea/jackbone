@@ -15,7 +15,7 @@
         '*actions': 'defaultAction'
         },
         myview: function () {
-            this.openView('MyView', MyView, {});
+            this.openView({name: 'MyView', Class: MyView});
         },
     });
 

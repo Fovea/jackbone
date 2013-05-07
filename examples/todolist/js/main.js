@@ -235,16 +235,16 @@
             '*actions': 'defaultAction'
         },
         openAbout: function () {
-            this.openDialog('About', AboutView, {});
+            this.openDialog({name: 'About', Class: AboutView});
         },
         openList: function () {
-            this.openViewController('List', FullListController, {});
+            this.openViewController({name: 'List', Class: FullListController});
         },
         openDoneList: function () {
-            this.openViewController('Done', DoneListController, {});
+            this.openViewController({name: 'Done', Class: DoneListController});
         },
         openTodoList: function () {
-            this.openViewController('Todo', TodoListController, {});
+            this.openViewController({name: 'Todo', Class: TodoListController});
         }
     });
 
