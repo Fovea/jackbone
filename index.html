@@ -178,34 +178,35 @@ The view already has been rendered, so it's better to only alter it if possible,
 <p>Uses a <strong>ListviewUpdater</strong> object:</p>
 
 <pre><code>ListviewUpdater: {
-    setLi: function ($li, model);
+    setLi: function (li, model);
     newLi: function (model);
 }
 </code></pre>
 
 <ul>
 <li>
-<strong>setLi</strong> will adjust the content of jQuery li element according to the given JSON model.</li>
+<strong>setLi</strong> will adjust the content of li DOM element according to the given JSON model.</li>
 <li>
 <strong>newLi</strong> will create a new li element from given JSON model.</li>
-</ul><h3>updateJSON <code>Listview.updateJSON($ul, collection, updater)</code>
-</h3>
+</ul>
 
-<p>Parameters:</p>
+<h3>updateJSON <code>Listview.updateJSON(ul, collectione updater, refresh)</code></h3>
 
-<ul>
+<p>Parameters:</p><ul>
 <li>
-<strong>$ul</strong>: a jQuery ul element</li>
+<strong>ul</strong>: ul element</li>
 <li>
 <strong>collection</strong>: JSON collection</li>
 <li>
 <strong>updater</strong>: a <code>ListviewUpdater</code> (see above)</li>
-</ul><h3>update <code>Listview.update($ul, collection, updater)</code>
+<li>
+<strong>refresh</strong>: if true, calls jQM Listview's refresh method.</li>
+</ul>
+
+<h3>update <code>Listview.update($ul, collection, updater)</code>
 </h3>
 
-<p>Parameters:</p>
-
-<ul>
+<p>Parameters:</p><ul>
 <li>
 <strong>$ul</strong>: a jQuery ul element</li>
 <li>
@@ -305,28 +306,27 @@ The view already has been rendered, so it's better to only alter it if possible,
 
 <p>Name of the page as referenced on the hash tag.</p>
 
-<h3>openView <code>object.openView(viewName, View, options, extra)</code>
-</h3>
+<h3>openView <code>object.openView(args, callback)</code></h3>
 
 <p>Create the view if not already cached, then open it.</p>
 
-<p><strong>viewName + options</strong> will identify the view in the cache, thus should be unique for each view.</p>
+<p><strong>args.name + args.options</strong> will identify the view in the cache, thus should be unique for each view.</p>
+<p><strong>args.extra</strong> are options, to heavy to be used as a key in the cache.</p>
+<p><strong>args.options</strong> and <strong>args.extra</strong> are options passed to the view.</p>
+<p><strong>args.Class</strong> has to be a <strong>Jackbone.View</strong> constructor.</p>
+<p><strong>callback</strong>(view) will be called when the view is ready.</p>
 
-<p><strong>extra</strong> are additional options, to heavy to be used as a key in the cache.</p>
-
-<p><strong>View</strong> has to be a <strong>Jackbone.View</strong> constructor.</p>
-
-<h3>openDialog <code>object.openDialog(viewName, View, options, extra)</code>
+<h3>openDialog <code>object.openDialog()</code>
 </h3>
 
 <p>Same as <strong>openView</strong>, but open the view as a dialog.</p>
 
-<h3>openViewController <code>object.openViewController(ctrlName, Controller, options, extra, role)</code>
+<h3>openViewController <code>object.openViewController(args, callback)</code>
 </h3>
 
-<p>Create view with a controller if not already cached, then open it. Behaviour is identical to <strong>openView</strong> except that <strong>Controller</strong> should be a <strong>Jackbone.Controller</strong> constructor instead of a <strong>Jackbone.View</strong>.</p>
+<p>Create view with a controller if not already cached, then open it. Behaviour is identical to <strong>openView</strong> except that <strong>args.Class</strong> should be a <strong>Jackbone.Controller</strong> constructor.</p>
 
-<h3>openDialogController <code>object.openDialogController(ctrlName, Controller, options, extra, role)</code>
+<h3>openDialogController <code>object.openDialogController(args, callback)</code>
 </h3>
 
 <p>Same as <strong>openViewController</strong>, but open the view as a dialog.</p>
