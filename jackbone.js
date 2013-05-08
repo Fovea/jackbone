@@ -1,4 +1,4 @@
-//     Jackbone.js 0.2.0
+//     Jackbone.js 0.3.0
 
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Jackbone may be freely distributed under the MIT license.
@@ -24,7 +24,7 @@
     }
 
     // Current version of the library. Keep in sync with `package.json`.
-    Jackbone.VERSION = '0.2.0';
+    Jackbone.VERSION = '0.3.0';
 
     // Require Backbone
     var Backbone = root.Backbone;
@@ -53,7 +53,7 @@
     // Used by the Router to profile view creation times.
     //
     // Set Jackbone.profile.enabled = true to activate.
-    Jackbone.profiler = {
+    var profiler = Jackbone.profiler = {
 
         // Set to true to enable profiling your views.
         enabled: false,
@@ -61,10 +61,15 @@
         // Dictionary of statistics.
         stats: {},
 
+        // Currently running timers
+        _startDate: {},
+
         // Called at the beggining of an operation
         onStart: function (t) {
             if (this.enabled) {
-                this._startDate = t || (+new Date());
+                var id = _.uniqueId('jt');
+                this._startDate[id] = t || (+new Date());
+                return id;
             }
         },
 
@@ -72,30 +77,36 @@
         //
         // Will update Jackbone.profiler.stats and show average duration on the
         // console.
-        onEnd: function (timerId, t) {
+        onEnd: function (timerId, timerName, t) {
             if (this.enabled) {
-                var duration = (t || (+new Date())) - this._startDate;
+                if (this._startDate[timerId]) {
+                    var duration = (t || (+new Date())) - this._startDate[timerId];
+                    delete this._startDate[timerId];
 
-                // Already have stats for this method? Update them.
-                if (typeof this.stats[timerId] !== 'undefined') {
-                    var stats = this.stats[timerId];
-                    stats.calls += 1;
-                    stats.totalMs += duration;
-                    if (duration > stats.maxMs) {
-                        stats.maxMs = duration;
+                    // Already have stats for this method? Update them.
+                    if (typeof this.stats[timerName] !== 'undefined') {
+                        var stats = this.stats[timerName];
+                        stats.calls += 1;
+                        stats.totalMs += duration;
+                        if (duration > stats.maxMs) {
+                            stats.maxMs = duration;
+                        }
                     }
+                    else {
+                        // It's the first time we profile this method, create the
+                        // initial stats.
+                        this.stats[timerName] = {
+                            calls: 1,
+                            totalMs: duration,
+                            maxMs: duration
+                        };
+                    }
+
+                    console.log('time(' + timerName + ') = ' + duration + 'ms');
                 }
                 else {
-                    // It's the first time we profile this method, create the
-                    // initial stats.
-                    this.stats[timerId] = {
-                        calls: 1,
-                        totalMs: duration,
-                        maxMs: duration
-                    };
+                    console.log('WARNING: invalid profiling timer');
                 }
-
-                console.log('time(' + timerId + ') = ' + duration + 'ms');
             }
         }
     };
@@ -250,7 +261,7 @@
             return true;
         },
 
-        // Provided for conveniance to views williing to ignore certain events.
+        // Provided for conveniance to views willing to ignore certain events.
         ignoreEvent: function (e) {
             if (e && e.preventDefault) {
                 e.preventDefault();
@@ -458,41 +469,43 @@
         // ul: a jQuery ul element
         // collection: JSON collection
         // updater, a ListviewUpdater (see above)
-        updateJSON: function (ul, collection, updater, refresh) {
+        updateJSON: function ($ul, collection, updater, refresh) {
+            var ul = ($ul.length ? $ul[0] : $ul);
             var i = 0;
-            var li = ul.find('li');
+            // var li = $ul.find('li');
+            var li = ul.childNodes;
 
             // Update existing
             while (i < collection.length && i < li.length) {
-                updater.setLi($(li[i]), collection[i]);
+                updater.setLi(li[i], collection[i]);
                 ++i;
             }
             // Add new
             while (i < collection.length) {
-                ul.append(updater.newLi(collection[i]));
+                $ul.append(updater.newLi(collection[i]));
                 ++i;
             }
             // Remove extra
             while (i < li.length) {
-                $(li[i]).remove();
+                ul.removeChild(li[i]);
                 ++i;
             }
             if (refresh !== false) {
-                ul.listview('refresh');
+                $(ul).listview('refresh');
             }
         },
 
         // Parameters
-        // ul: a jQuery ul element
+        // $ul: a jQuery ul element
         // collection: Backbone collection
         // updater, a ListviewUpdater (see above)
-        update: function (ul, collection, updater, refresh) {
+        update: function ($ul, collection, updater, refresh) {
             var json = _(collection.models).map(function (m) {
                 var ret = _.clone(m.attributes);
                 _.extend(ret, { id: m.id, cid: m.cid });
                 return ret;
             });
-            this.updateJSON(ul, json, updater, refresh);
+            this.updateJSON($ul, json, updater, refresh);
         }
     };
 
@@ -581,7 +594,7 @@
         // this.view has to be instanciated here.
         initialize: function () {
             // Prepare options to be sent to the view.
-            this.options.onRefresh = _.bind(this.refresh, this);
+            // this.options.onRefresh = _.bind(this.refresh, this);
             this.view = null;
         },
 
@@ -922,14 +935,14 @@
         _openWithViewManager: function (args, callback) {
 
             var t = +new Date();
-            if (t - this._openInProgress < 100) {
+            if (t - this._openInProgress < 300) {
                 // Probably a double click, ignore.
                 return false;
             }
             this._openInProgress = t;
 
             // Start profiling view opening.
-            Jackbone.profiler.onStart();
+            var timerId = profiler.onStart(t);
 
             if (!args.extra) {
                 args.extra = {};
@@ -943,13 +956,14 @@
             // Called when View Manager is done opening the window.
             var that = this;
             var done = function (v) {
+
+                that._openInProgress = false;
                 that.changePage(v._pageUID.replace(/\W/g, '-'), v, args.role);
 
                 // Done profiling.
-                Jackbone.profiler.onEnd(v._pageUID);
+                profiler.onEnd(timerId, v._pageUID);
 
                 if (typeof callback === 'function') {
-                    that._openInProgress = false;
                     callback(v);
                 }
             };
@@ -1002,8 +1016,18 @@
             // For already existing pages, only delegate events so they can
             // handle onPageBeforeShow and onPageShow.
             if (isExistingPage.length === 1) {
-                page.delegateEvents();
-                page.refresh();
+
+                // Sometimes, controller may have been destroyed but the
+                // HTML stayed in the DOM (in case of an exception).
+                // We can detect that using needRedraw, which indicate
+                // that we have to do a full repaint.
+                if (page.needRedraw) {
+                    page.render();
+                }
+                else {
+                    page.refresh();
+                    page.delegateEvents();
+                }
 
             } else {
                 // Create the page, store its page name in an attribute
