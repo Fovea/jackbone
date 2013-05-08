@@ -56,7 +56,11 @@
 </li>
 <li>More advanced: <a href="https://github.com/Fovea/jackbone/blob/master/examples/todolist/js/main.js">Todo List</a>
 </li>
-</ul><h2>Jackbone.View</h2>
+</ul>
+
+<p>Or read through <a href="master/docs/jackbone.html">the annotated source</a>.</p>
+
+<h2>Jackbone.View</h2>
 
 <p>Jackbone views are basically Backbone views with extra features like:</p>
 
@@ -256,7 +260,9 @@ The view already has been rendered, so it's better to only alter it if possible,
 
 <p>The View Manager will instanciate controllers.</p>
 
-<p>It will then look for this.view, an instanciated Jackbone.View</p>
+<p>Before rendering the View, it will call Controller's <strong>refresh()</strong> method, where he's supposed to load its Models and Collections. This method is meant to work asynchronously, with a callback to be called when refresh is done.</p>
+
+<p>It will then look for <strong>this.view</strong>, an instanciated Jackbone.View</p>
 
 <h3>initialize <code>object.initialize(options)</code>
 </h3>
@@ -338,7 +344,7 @@ The view already has been rendered, so it's better to only alter it if possible,
     </div>
     <footer>
       <p>Project maintained by <a href="https://github.com/Fovea">Fovea</a></p>
-      <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
+      <p>Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
     </footer>
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
     
