@@ -482,13 +482,14 @@
             }
             // Add new
             while (i < collection.length) {
-                $ul.append(updater.newLi(collection[i]));
+                $(ul).append(updater.newLi(collection[i]));
                 ++i;
             }
             // Remove extra
-            while (i < li.length) {
-                ul.removeChild(li[i]);
-                ++i;
+            var j = li.length - 1;
+            while (j >= i) {
+                ul.removeChild(li[j]);
+                --j;
             }
             if (refresh !== false) {
                 $(ul).listview('refresh');
