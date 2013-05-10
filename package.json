@@ -1,7 +1,7 @@
 {
     "name"          : "jackbone",
     "description"   : "Give a Backbone to your JQuery Mobile app.",
-    "url"           : "http://jackbonejs.org",
+    "url"           : "http://www.fovea.cc/jackbone/",
     "keywords"      : ["model", "view", "controller", "router", "server", "client", "browser", "mobile", "jquery"],
     "author"        : "Jean-Christophe Hoelt <hoelt@fovea.cc>",
     "repository": {
@@ -19,6 +19,6 @@
         "uglify-js": "latest"
     },
     "main"          : "jackbone.js",
-    "version"       : "0.3.0",
+    "version"       : "0.3.1",
     "license"       : "MIT"
 }

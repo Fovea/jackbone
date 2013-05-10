@@ -1,9 +1,9 @@
-//     Jackbone.js 0.3.0
+//     Jackbone.js 0.3.1
 
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Jackbone may be freely distributed under the MIT license.
 //     For all details and documentation:
-//     http://jackbone.org
+//     http://www.fovea.cc/jackbone/
 (function () {
     'use strict';
 
@@ -23,9 +23,6 @@
         Jackbone = root.Jackbone = {};
     }
 
-    // Current version of the library. Keep in sync with `package.json`.
-    Jackbone.VERSION = '0.3.0';
-
     // Require Backbone
     var Backbone = root.Backbone;
     if (!Backbone && (typeof require !== 'undefined')) {
@@ -40,11 +37,14 @@
     // And $ as retrieved by Backbone
     var $ = Backbone.$;
 
-    // Create local references to array methods we'll want to use later.
-    var slice = Array.prototype.slice;
-
     // Jackbone is an extension of Backbone
     _.extend(Jackbone, Backbone);
+
+    // Current version of the library. Keep in sync with `package.json`.
+    Jackbone.VERSION = '0.3.1';
+
+    // Create local references to array methods we'll want to use later.
+    var slice = Array.prototype.slice;
 
     // Jackbone.profiler
     // -----------------
@@ -64,11 +64,17 @@
         // Currently running timers
         _startDate: {},
 
+        _timerConsoleName: {},
+
         // Called at the beggining of an operation
-        onStart: function (t) {
+        onStart: function (t, timerName) {
             if (this.enabled) {
                 var id = _.uniqueId('jt');
                 this._startDate[id] = t || (+new Date());
+                if (console.profile && timerName) {
+                    this._timerConsoleName[id] = timerName;
+                    console.profile(timerName);
+                }
                 return id;
             }
         },
@@ -82,6 +88,13 @@
                 if (this._startDate[timerId]) {
                     var duration = (t || (+new Date())) - this._startDate[timerId];
                     delete this._startDate[timerId];
+
+                    if (console.profile) {
+                        if (this._timerConsoleName[timerId]) {
+                            console.profileEnd(this._timerConsoleName[timerId]);
+                            delete this._timerConsoleName[timerId];
+                        }
+                    }
 
                     // Already have stats for this method? Update them.
                     if (typeof this.stats[timerName] !== 'undefined') {
@@ -126,8 +139,10 @@
         // Default "Back" button
         this.back = { title: 'Back', hash: '' };
 
+        // Call backbone view's constructor
         Backbone.View.apply(this, arguments);
 
+        // Apply options
         if (options) {
             this.setOptions(options);
         }
@@ -943,7 +958,7 @@
             this._openInProgress = t;
 
             // Start profiling view opening.
-            var timerId = profiler.onStart(t);
+            var timerId = profiler.onStart(t, args.name);
 
             if (!args.extra) {
                 args.extra = {};
@@ -1112,6 +1127,7 @@
     // When JQueryMobile is initialized and document is ready,
     // we can tell client app to start.
     Jackbone.configureJQM = function () {
+
         // Disable JQueryMobile Navigation
         $.mobile.ajaxEnabled = false;
         $.mobile.linkBindingEnabled = false;
