@@ -654,7 +654,7 @@
     // --------------------
 
     // Handles life and death of Views and Controllers
-    var ViewManager = {
+    var ViewManager = Jackbone.ViewManager = {
         views: {},
         controllers: {},
         currentController: null,
@@ -773,6 +773,9 @@
         // every n calls to createWithController.
         runGC: 0,
 
+        // UID of the page currently being opened.
+        _openInProgress: 0,
+
         // Create a Controller if it's not already in cache.
         // Configure it with the given options.
         //
@@ -792,14 +795,16 @@
             var options = args.options || {};
             var extra_options = args.extra;
 
+            // UID of the page.
+            var pageUID = name + JSON.stringify(options).replace(/["{}]/g, "");
+            this._openInProgress = pageUID;
+
             // Run Controller Garbage Collector
             this.runGC += 1;
             if (this.runGC > 5) {
                 this.runGC = 0;
                 this._clearControllers();
             }
-
-            var pageUID = name + JSON.stringify(options).replace(/["{}]/g, "");
 
             // Add extra_options to options
             if (extra_options) {
@@ -817,6 +822,15 @@
             // Called when the views and controller are done being created
             var ctrl = null;
             var doneCreate = function () {
+
+                // It happens that a refresh takes so long that the
+                // view is GCed between refresh and doneCreate. Most probably
+                // the user tried to open another view in the meantime,
+                // So let's ignore the create view event.
+                if (!that.controllers[pageUID] || (pageUID !== that._openInProgress)) {
+                    return;
+                }
+
                 // Return root view (a JQMView)
                 that.setCurrentController(ctrl);
                 that.controllers[pageUID].lastView = +new Date();
