@@ -688,9 +688,20 @@
                     if (c.controller._rootView) {
                         c.controller._rootView.clean();
                         c.controller._rootView.remove();
+                        Jackbone.trigger("destroyview", c.controller._rootView);
                     }
                 }
             });
+        },
+
+        forceGarbageCollection: function () {
+            var that = this;
+            // For all dates to 0, so everyone gets garbage collected.
+            _(this.controllers).each(function (c) {
+                c.lastView = 0;
+            });
+            // Then run the garbage collector
+            this._clearControllers();
         },
 
         // Create a View if it's not already in cache.
