@@ -1,4 +1,4 @@
-//     Jackbone.js 0.3.1
+//     Jackbone.js 0.3.2
 
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Jackbone may be freely distributed under the MIT license.
@@ -41,7 +41,7 @@
     _.extend(Jackbone, Backbone);
 
     // Current version of the library. Keep in sync with `package.json`.
-    Jackbone.VERSION = '0.3.1';
+    Jackbone.VERSION = '0.3.2';
 
     // Create local references to array methods we'll want to use later.
     var slice = Array.prototype.slice;
@@ -875,6 +875,7 @@
                     // Cache the controller
                     that.controllers[pageUID] = { pageUID: pageUID, controller: ctrl };
                     ctrl._rootView = view;
+                    view.controller = ctrl;
 
                     doneCreate();
                 };
@@ -989,6 +990,7 @@
 
                 that._openInProgress = false;
                 that.changePage(v._pageUID.replace(/\W/g, '-'), v, args.role);
+                Jackbone.trigger('openview', v);
 
                 // Done profiling.
                 profiler.onEnd(timerId, v._pageUID);
