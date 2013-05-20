@@ -1,4 +1,4 @@
-//     Jackbone.js 0.3.2
+//     Jackbone.js 0.4
 
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Jackbone may be freely distributed under the MIT license.
@@ -41,7 +41,7 @@
     _.extend(Jackbone, Backbone);
 
     // Current version of the library. Keep in sync with `package.json`.
-    Jackbone.VERSION = '0.3.2';
+    Jackbone.VERSION = '0.4.0';
 
     // Create local references to array methods we'll want to use later.
     var slice = Array.prototype.slice;
@@ -222,6 +222,11 @@
         // Overload for your own use.
         onPageCreate: function () {
             this.callSubviews('onPageCreate');
+        },
+        // Called when the page is being enhanced by JQuery Mobile.
+        // Overload for your own use.
+        onPageManualCreate: function () {
+            this.callSubviews('onPageManualCreate');
         },
         // Called before the page starts being transitioned to.
         // Overload for your own use.
@@ -440,6 +445,9 @@
         },
         _onPageCreate: function () {
             this.callSubviews('onPageCreate');
+        },
+        _onPageManualCreate: function () {
+            this.callSubviews('onPageManualCreate');
         },
         setup: function () {
             if (this.needSetup) {
@@ -1080,20 +1088,49 @@
 
                 // Render it and add it in the DOM.
                 page.render();
+
+                // Append to the DOM.
                 document.body.appendChild(page.el);
+
+                if (Jackbone.manualMode) {
+                    // Create the new page
+                    page._onPageBeforeCreate();
+                    page._onPageManualCreate();
+                    page._onPageCreate();
+                }
             }
 
-            // Select the transition to apply.
-            var t = this.selectTransition(pageName, role);
+            if (!Jackbone.manualMode) {
+                // Select the transition to apply.
+                var t = this.selectTransition(pageName, role);
 
-            // Perform transition using JQuery Mobile
-            $.mobile.changePage(page.$el, {
-                changeHash:    false,
-                transition:    t.transition,
-                reverse:       t.reverse,
-                role:          role,
-                pageContainer: page.$el
-            });
+                // Perform transition using JQuery Mobile
+                $.mobile.changePage(page.$el, {
+                    changeHash:    false,
+                    transition:    t.transition,
+                    reverse:       t.reverse,
+                    role:          role,
+                    pageContainer: page.$el
+                });
+            }
+            else {
+
+                // Hide previous page
+                if (Jackbone.activePage) {
+                    Jackbone.activePage._onPageBeforeHide();
+                    Jackbone.activePage.$el.hide();
+                    Jackbone.activePage._onPageHide();
+                }
+
+                // Show next page.
+                page._onPageBeforeShow();
+                page.$el.show();
+                page._onPageShow();
+
+                // Update 'activePage'
+                Jackbone.activePage = page;
+                $.mobile.activePage = page.$el;
+            }
 
             // Current hash is stored so a subsequent openView can know
             // which page it comes from.
@@ -1165,5 +1202,13 @@
         // Enable for smooth transitions on iOS
         $.mobile.touchOverflowEnabled = true;
     };
+
+    // Configuration options.
+
+    // Manual mode is an experimental feature, in which
+    // jQuery Mobile's automatic page enhancements is disabled.
+    // You can still create jQM widgets and call the API
+    // by yourself. This allows for greater performance.
+    Jackbone.manualMode = false;
 
 }).call(this);
