@@ -976,7 +976,7 @@
 
         // Name of the page as referenced on the hash tag.
         getPageHash: function (page, args) {
-            return makePageName('?', page, args);
+            return makePageName('_', page, args);
         },
 
         _openInProgress: false,
@@ -1089,15 +1089,16 @@
                 // Render it and add it in the DOM.
                 page.render();
 
-                // Append to the DOM.
-                document.body.appendChild(page.el);
-
                 if (Jackbone.manualMode) {
                     // Create the new page
                     page._onPageBeforeCreate();
+                    Jackbone.trigger('createview', page);
                     page._onPageManualCreate();
                     page._onPageCreate();
                 }
+
+                // Append to the DOM.
+                document.body.appendChild(page.el);
             }
 
             if (!Jackbone.manualMode) {
@@ -1115,21 +1116,33 @@
             }
             else {
 
-                // Hide previous page
-                if (Jackbone.activePage) {
-                    Jackbone.activePage._onPageBeforeHide();
-                    Jackbone.activePage.$el.hide();
-                    Jackbone.activePage._onPageHide();
+                var currentActivePage = Jackbone.activePage;
+                try {
+                    // Hide previous page, show next
+                    if (Jackbone.activePage) {
+                        Jackbone.activePage._onPageBeforeHide();
+                    }
+                    page._onPageBeforeShow();
+                    page.$el.show();
+                    if (Jackbone.activePage) {
+                        Jackbone.activePage.$el.hide();
+                        Jackbone.activePage._onPageHide();
+                    }
+                    page._onPageShow();
+
+                    // Update 'activePage'
+                    Jackbone.activePage = page;
+                    $.mobile.activePage = page.$el;
                 }
-
-                // Show next page.
-                page._onPageBeforeShow();
-                page.$el.show();
-                page._onPageShow();
-
-                // Update 'activePage'
-                Jackbone.activePage = page;
-                $.mobile.activePage = page.$el;
+                catch (error) {
+                    page.$el.hide();
+                    if (currentActivePage) {
+                        currentActivePage.$el.show();
+                        Jackbone.activePage = currentActivePage;
+                        $.mobile.activePage = currentActivePage.$el;
+                    }
+                    throw new Error('Failed to changePage: ' + error);
+                }
             }
 
             // Current hash is stored so a subsequent openView can know
